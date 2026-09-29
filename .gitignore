@@ -70,3 +70,4 @@ CLAUDE.md
 serviceAccountKey.json
 firebase-adminsdk*.json
 .firebaserc 
+.vscode

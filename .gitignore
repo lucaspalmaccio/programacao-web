@@ -41,12 +41,6 @@ testem.log
 .DS_Store
 Thumbs.db
 
-# Claude Code / Claude AI
-.claude/
-CLAUDE.md
-.claude.json
-.mcp.json
-
 # Dependencies
 /bower_components
 .pnp

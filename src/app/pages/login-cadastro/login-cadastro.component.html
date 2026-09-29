@@ -1,0 +1,236 @@
+<main class="container py-4 py-md-5">
+  <h1 class="h4 text-vinho brand-font mb-4 text-center">Cadastro / Login</h1>
+
+  @if (retornoPedido) {
+    <div class="alert alert-warning text-center" role="alert">
+      <i class="bi bi-lock"></i> Entre ou crie sua conta para finalizar a compra. Sua cesta foi mantida.
+    </div>
+  }
+
+  <div class="row justify-content-center g-4">
+    <!-- Coluna esquerda: login -->
+    <div class="col-12 col-md-6 col-lg-5">
+      <div class="card h-100 p-4">
+        <h2 class="h6 text-vinho mb-3">Já tenho cadastro</h2>
+        <form [formGroup]="formLogin" (ngSubmit)="enviarLogin()" novalidate>
+          @if (erroLogin) {
+            <div class="alert alert-danger py-2 small" role="alert">{{ erroLogin }}</div>
+          }
+
+          <div class="mb-3">
+            <label class="form-label" for="loginEmail">Email</label>
+            <input
+              id="loginEmail"
+              type="email"
+              class="form-control"
+              autocomplete="email"
+              formControlName="email"
+              [class.is-invalid]="campoInvalido(formLogin, 'email', loginEnviado)"
+            >
+            @if (campoInvalido(formLogin, 'email', loginEnviado)) {
+              <div class="invalid-feedback">Informe um e-mail válido.</div>
+            }
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="loginSenha">Senha</label>
+            <input
+              id="loginSenha"
+              type="password"
+              class="form-control"
+              autocomplete="current-password"
+              formControlName="senha"
+              [class.is-invalid]="campoInvalido(formLogin, 'senha', loginEnviado)"
+            >
+            @if (campoInvalido(formLogin, 'senha', loginEnviado)) {
+              <div class="invalid-feedback">Informe sua senha.</div>
+            }
+          </div>
+
+          <button type="submit" class="btn btn-vinho w-100 mb-2" [disabled]="enviando">
+            @if (enviando) { <span class="spinner-border spinner-border-sm me-1"></span> }
+            Entrar
+          </button>
+          <button type="button" class="btn btn-link small text-vinho d-block mx-auto p-0" (click)="abrirRecuperacao()">Esqueci minha senha</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Coluna direita: convite ou formulário de cadastro -->
+    <div class="col-12 col-md-6" [class.col-lg-5]="modo === 'login'" [class.col-lg-7]="modo === 'cadastro'">
+      @if (modo === 'login') {
+        <div class="card h-100 p-4 text-center d-flex flex-column justify-content-center">
+          <i class="bi bi-person-plus fs-1 text-dourado mb-2"></i>
+          <h2 class="h6 text-vinho mb-3">Ainda não tenho cadastro</h2>
+          <p class="small text-muted">Crie sua conta e acompanhe seus pedidos, favoritos e ofertas exclusivas.</p>
+          <button type="button" class="btn btn-outline-vinho" (click)="irParaCadastro()">Clique Aqui</button>
+        </div>
+      } @else {
+        <div class="card p-4">
+          <h2 class="h6 text-vinho mb-3">Criar minha conta</h2>
+
+          @if (cadastroSucesso) {
+            <div class="alert alert-success mb-0">Cadastro realizado com sucesso! Redirecionando...</div>
+          } @else {
+            <form [formGroup]="formCadastro" (ngSubmit)="enviarCadastro()" novalidate>
+              @if (erroCadastro) {
+                <div class="alert alert-danger py-2 small" role="alert">{{ erroCadastro }}</div>
+              }
+
+              <div class="mb-3">
+                <label class="form-label" for="nome">Nome completo</label>
+                <input
+                  id="nome"
+                  type="text"
+                  class="form-control"
+                  autocomplete="name"
+                  formControlName="nome"
+                  [class.is-invalid]="campoInvalido(formCadastro, 'nome', cadastroEnviado)"
+                >
+                @if (campoInvalido(formCadastro, 'nome', cadastroEnviado)) {
+                  <div class="invalid-feedback">Informe nome e sobrenome.</div>
+                }
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="cadastroEmail">Email</label>
+                <input
+                  id="cadastroEmail"
+                  type="email"
+                  class="form-control"
+                  autocomplete="email"
+                  formControlName="email"
+                  [class.is-invalid]="campoInvalido(formCadastro, 'email', cadastroEnviado)"
+                >
+                @if (campoInvalido(formCadastro, 'email', cadastroEnviado)) {
+                  <div class="invalid-feedback">Informe um e-mail válido.</div>
+                }
+              </div>
+
+              <div class="row">
+                <div class="col-12 col-sm-6 mb-3">
+                  <label class="form-label" for="cpf">CPF</label>
+                  <input
+                    id="cpf"
+                    type="text"
+                    inputmode="numeric"
+                    appMascara="cpf"
+                    class="form-control"
+                    placeholder="000.000.000-00"
+                    formControlName="cpf"
+                    [class.is-invalid]="campoInvalido(formCadastro, 'cpf', cadastroEnviado)"
+                  >
+                  @if (campoInvalido(formCadastro, 'cpf', cadastroEnviado)) {
+                    <div class="invalid-feedback">Informe um CPF válido.</div>
+                  }
+                </div>
+                <div class="col-12 col-sm-6 mb-3">
+                  <label class="form-label" for="nascimento">Data de nascimento</label>
+                  <input
+                    id="nascimento"
+                    type="date"
+                    class="form-control"
+                    autocomplete="bday"
+                    formControlName="nascimento"
+                    [class.is-invalid]="campoInvalido(formCadastro, 'nascimento', cadastroEnviado)"
+                  >
+                  @if (campoInvalido(formCadastro, 'nascimento', cadastroEnviado)) {
+                    <div class="invalid-feedback">
+                      @if (formCadastro.get('nascimento')?.errors?.['menorDeIdade']) {
+                        É preciso ter 18 anos ou mais para se cadastrar.
+                      } @else {
+                        Informe uma data de nascimento válida.
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="telefone">Telefone</label>
+                <input
+                  id="telefone"
+                  type="tel"
+                  appMascara="telefone"
+                  class="form-control"
+                  placeholder="(00) 90000-0000"
+                  autocomplete="tel"
+                  formControlName="telefone"
+                  [class.is-invalid]="campoInvalido(formCadastro, 'telefone', cadastroEnviado)"
+                >
+                @if (campoInvalido(formCadastro, 'telefone', cadastroEnviado)) {
+                  <div class="invalid-feedback">Informe um telefone válido com DDD.</div>
+                }
+              </div>
+
+              <div class="row">
+                <div class="col-12 col-sm-6 mb-3">
+                  <label class="form-label" for="senha">Senha</label>
+                  <input
+                    id="senha"
+                    type="password"
+                    class="form-control"
+                    autocomplete="new-password"
+                    formControlName="senha"
+                    [class.is-invalid]="campoInvalido(formCadastro, 'senha', cadastroEnviado)"
+                  >
+                  @if (campoInvalido(formCadastro, 'senha', cadastroEnviado)) {
+                    <div class="invalid-feedback">Use 8 ou mais caracteres, com letras e números.</div>
+                  } @else {
+                    <div class="form-text">Mínimo de 8 caracteres, com letras e números.</div>
+                  }
+                </div>
+                <div class="col-12 col-sm-6 mb-3">
+                  <label class="form-label" for="confirmaSenha">Confirmar senha</label>
+                  <input
+                    id="confirmaSenha"
+                    type="password"
+                    class="form-control"
+                    autocomplete="new-password"
+                    formControlName="confirmaSenha"
+                    [class.is-invalid]="confirmaComErro"
+                  >
+                  @if (confirmaComErro) {
+                    <div class="invalid-feedback">
+                      @if (formCadastro.errors?.['senhasDiferentes']) {
+                        As senhas não coincidem.
+                      } @else {
+                        Confirme a senha.
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <div class="form-check mb-4">
+                <input
+                  id="termos"
+                  type="checkbox"
+                  class="form-check-input"
+                  formControlName="termos"
+                  [class.is-invalid]="campoInvalido(formCadastro, 'termos', cadastroEnviado)"
+                >
+                <label class="form-check-label small" for="termos">
+                  Declaro ter 18 anos ou mais e concordo com os termos de uso e a política de privacidade.
+                </label>
+                <div class="invalid-feedback">Aceite os termos para continuar.</div>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-vinho" (click)="irParaLogin()">Voltar</button>
+                <button type="submit" class="btn btn-vinho flex-fill" [disabled]="enviando">
+                  @if (enviando) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                  Cadastrar
+                </button>
+              </div>
+            </form>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</main>
+
+@if (recuperacaoAberta) {
+  <app-esqueci-senha (fechar)="fecharRecuperacao()"></app-esqueci-senha>
+}

@@ -1,0 +1,38 @@
+<div class="overlay" (click)="fechar.emit()">
+  <div
+    class="card caixa p-4 shadow"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="tituloRecuperacao"
+    (click)="$event.stopPropagation()"
+  >
+    <button type="button" class="btn-close fechar" aria-label="Fechar" (click)="fechar.emit()"></button>
+
+    <h1 id="tituloRecuperacao" class="h5 text-vinho brand-font mb-3 text-center">Esqueci minha senha</h1>
+
+    @if (sucesso) {
+      <div class="alert alert-success text-center mb-3">
+        Se o e-mail informado estiver cadastrado, você receberá as instruções de recuperação em instantes.
+      </div>
+      <button type="button" class="btn btn-vinho w-100" (click)="fechar.emit()">Voltar ao login</button>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+        <label class="form-label" for="emailRecuperacao">Informe o seu email</label>
+        <div class="input-group">
+          <input
+            id="emailRecuperacao"
+            type="email"
+            class="form-control"
+            formControlName="email"
+            autofocus
+            [class.is-invalid]="campoInvalido('email')"
+          >
+          <button type="submit" class="btn btn-vinho">OK</button>
+        </div>
+        @if (campoInvalido('email')) {
+          <div class="invalid-feedback d-block">Informe um e-mail válido.</div>
+        }
+      </form>
+    }
+  </div>
+</div>

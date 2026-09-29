@@ -1,0 +1,28 @@
+@if (!liberado) {
+  <div class="gate" role="dialog" aria-modal="true" aria-labelledby="tituloIdade">
+    <div class="gate-caixa text-center">
+      <div class="mb-3"><app-logo [altura]="64"></app-logo></div>
+
+      @if (!menorDeIdade) {
+        <h1 id="tituloIdade" class="h4 brand-font text-vinho mb-2">Você tem 18 anos ou mais?</h1>
+        <p class="text-muted mb-4">
+          Para acessar a loja, precisamos confirmar que você é maior de idade.
+        </p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-center">
+          <button type="button" class="btn btn-vinho px-4" (click)="confirmar()">Sim, sou maior de 18</button>
+          <button type="button" class="btn btn-outline-vinho px-4" (click)="recusar()">Não</button>
+        </div>
+      } @else {
+        <h1 id="tituloIdade" class="h4 brand-font text-vinho mb-2">Acesso restrito</h1>
+        <p class="text-muted mb-4">
+          A venda e o consumo de bebidas alcoólicas são proibidos para menores de 18 anos.
+        </p>
+        <button type="button" class="btn btn-outline-vinho px-4" (click)="voltar()">Voltar</button>
+      }
+
+      <p class="small text-muted mt-4 mb-0">
+        <i class="bi bi-exclamation-circle"></i> Beba com moderação.
+      </p>
+    </div>
+  </div>
+}

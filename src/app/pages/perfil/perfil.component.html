@@ -1,0 +1,124 @@
+<main class="container py-4 py-md-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+      <h1 class="h4 text-vinho brand-font mb-0">Meu perfil</h1>
+      <small class="text-muted">{{ usuario.email }}</small>
+    </div>
+    <div class="d-flex gap-2">
+      <a routerLink="/pedidos" class="btn btn-outline-vinho btn-sm"><i class="bi bi-bag"></i> Meus pedidos</a>
+      <button type="button" class="btn btn-vinho btn-sm" (click)="sair()"><i class="bi bi-box-arrow-right"></i> Sair</button>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Dados pessoais -->
+    <div class="col-12 col-lg-6">
+      <form class="card p-4 h-100" [formGroup]="formDados" (ngSubmit)="salvarDados()" novalidate>
+        <h2 class="h6 text-vinho mb-3">Dados pessoais</h2>
+
+        <div class="mb-3">
+          <label class="form-label" for="pNome">Nome completo</label>
+          <input id="pNome" type="text" class="form-control" formControlName="nome" [class.is-invalid]="invalido(formDados, 'nome', dadosEnviado)">
+          <div class="invalid-feedback">Informe nome e sobrenome.</div>
+        </div>
+
+        <div class="row">
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label" for="pCpf">CPF</label>
+            <input id="pCpf" type="text" class="form-control" [value]="usuario.cpf" disabled>
+          </div>
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label" for="pNascimento">Data de nascimento</label>
+            <input id="pNascimento" type="date" class="form-control" formControlName="nascimento" [class.is-invalid]="invalido(formDados, 'nascimento', dadosEnviado)">
+            <div class="invalid-feedback">Informe uma data válida (18 anos ou mais).</div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="pEmail">Email</label>
+          <input id="pEmail" type="email" class="form-control" [value]="usuario.email" disabled>
+          <div class="form-text">CPF e e-mail não podem ser alterados.</div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label" for="pTelefone">Telefone</label>
+          <input id="pTelefone" type="tel" appMascara="telefone" class="form-control" formControlName="telefone" [class.is-invalid]="invalido(formDados, 'telefone', dadosEnviado)">
+          <div class="invalid-feedback">Informe um telefone válido com DDD.</div>
+        </div>
+
+        <button type="submit" class="btn btn-vinho mt-auto align-self-start">Salvar dados</button>
+      </form>
+    </div>
+
+    <!-- Endereço -->
+    <div class="col-12 col-lg-6">
+      <form class="card p-4 h-100" [formGroup]="formEndereco" (ngSubmit)="salvarEndereco()" novalidate>
+        <h2 class="h6 text-vinho mb-1">Endereço de entrega</h2>
+        <p class="small text-muted mb-3">Usado para preencher automaticamente seus próximos pedidos.</p>
+
+        <div class="row g-3">
+          <div class="col-12 col-sm-4">
+            <label class="form-label" for="eCep">CEP</label>
+            <input id="eCep" type="text" appMascara="cep" inputmode="numeric" class="form-control" placeholder="00000-000" formControlName="cep" [class.is-invalid]="invalido(formEndereco, 'cep', enderecoEnviado)">
+            <div class="invalid-feedback">CEP inválido.</div>
+          </div>
+          <div class="col-12 col-sm-8">
+            <label class="form-label" for="eEndereco">Endereço</label>
+            <input id="eEndereco" type="text" class="form-control" formControlName="endereco" [class.is-invalid]="invalido(formEndereco, 'endereco', enderecoEnviado)">
+            <div class="invalid-feedback">Informe o endereço.</div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <label class="form-label" for="eNumero">Número</label>
+            <input id="eNumero" type="text" class="form-control" formControlName="numero" [class.is-invalid]="invalido(formEndereco, 'numero', enderecoEnviado)">
+            <div class="invalid-feedback">Número inválido.</div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <label class="form-label" for="eUf">UF</label>
+            <input id="eUf" type="text" maxlength="2" class="form-control text-uppercase" formControlName="uf" [class.is-invalid]="invalido(formEndereco, 'uf', enderecoEnviado)">
+            <div class="invalid-feedback">Use 2 letras.</div>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="eCidade">Cidade</label>
+            <input id="eCidade" type="text" class="form-control" formControlName="cidade" [class.is-invalid]="invalido(formEndereco, 'cidade', enderecoEnviado)">
+            <div class="invalid-feedback">Informe a cidade.</div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-vinho mt-4 align-self-start">Salvar endereço</button>
+      </form>
+    </div>
+
+    <!-- Senha -->
+    <div class="col-12">
+      <form class="card p-4" [formGroup]="formSenha" (ngSubmit)="alterarSenha()" novalidate>
+        <h2 class="h6 text-vinho mb-3">Alterar senha</h2>
+
+        @if (erroSenha) {
+          <div class="alert alert-danger py-2 small" role="alert">{{ erroSenha }}</div>
+        }
+
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="sAtual">Senha atual</label>
+            <input id="sAtual" type="password" autocomplete="current-password" class="form-control" formControlName="senhaAtual" [class.is-invalid]="invalido(formSenha, 'senhaAtual', senhaEnviada)">
+            <div class="invalid-feedback">Informe a senha atual.</div>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="sNova">Nova senha</label>
+            <input id="sNova" type="password" autocomplete="new-password" class="form-control" formControlName="novaSenha" [class.is-invalid]="invalido(formSenha, 'novaSenha', senhaEnviada)">
+            <div class="invalid-feedback">Use 8 ou mais caracteres, com letras e números.</div>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="sConfirma">Confirmar nova senha</label>
+            <input id="sConfirma" type="password" autocomplete="new-password" class="form-control" formControlName="confirmaSenha" [class.is-invalid]="confirmaComErro">
+            <div class="invalid-feedback">
+              @if (formSenha.errors?.['senhasDiferentes']) { As senhas não coincidem. } @else { Confirme a nova senha. }
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-outline-vinho mt-4 align-self-start">Alterar senha</button>
+      </form>
+    </div>
+  </div>
+</main>

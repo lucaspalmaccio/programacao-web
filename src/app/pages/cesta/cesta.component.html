@@ -1,0 +1,179 @@
+<main class="container py-4 py-md-5">
+  <h1 class="h4 text-vinho brand-font mb-4">Cesta</h1>
+
+  @if (pedidoCriado; as pedido) {
+    @if (pedido.pagamento === 'pix' && !pixConfirmado) {
+      <!-- Pix simulado: aguardando pagamento -->
+      <section class="card p-4 pix text-center" aria-live="polite">
+        <span class="badge bg-vinho align-self-center mb-2">Pedido #{{ pedido.id }}</span>
+        <h2 class="h5 brand-font text-vinho mb-1">Pague com Pix</h2>
+        <p class="text-muted small mb-3">Escaneie o QR Code no app do seu banco ou use o código copia e cola.</p>
+
+        <div class="pix-qr mx-auto mb-3">
+          <app-pix-qr [semente]="'pedido-' + pedido.id"></app-pix-qr>
+        </div>
+
+        <p class="h4 text-vinho mb-3">{{ pedido.total | currency: 'BRL' }}</p>
+
+        <div class="d-inline-flex align-items-center justify-content-center gap-2 mb-2 aguardando">
+          <span class="spinner-border spinner-border-sm text-dourado" aria-hidden="true"></span>
+          <span>Aguardando pagamento...</span>
+          <strong class="text-vinho">{{ pixMinutos }}</strong>
+        </div>
+        <div class="progress mx-auto mb-4 pix-progresso" role="progressbar" [attr.aria-valuenow]="progressoPix" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar barra-frete" [style.width.%]="progressoPix"></div>
+        </div>
+
+        <label class="form-label small text-start w-100" for="codigoPix">Pix copia e cola</label>
+        <div class="input-group mb-3">
+          <input id="codigoPix" type="text" class="form-control form-control-sm" [value]="codigoPix" readonly>
+          <button type="button" class="btn btn-outline-vinho btn-sm" (click)="copiarCodigoPix()"><i class="bi bi-clipboard"></i> Copiar</button>
+        </div>
+
+        <p class="small text-muted mb-0"><i class="bi bi-info-circle"></i> Simulação: nenhum pagamento real é feito e o QR Code é apenas ilustrativo. O pagamento será confirmado automaticamente em alguns segundos.</p>
+      </section>
+    } @else {
+      <div class="alert alert-success">
+        <h2 class="h6 mb-1">
+          <i class="bi bi-check-circle-fill"></i>
+          @if (pedido.pagamento === 'pix') { Pagamento confirmado! } @else { Pedido #{{ pedido.id }} realizado com sucesso! }
+        </h2>
+        @if (pedido.pagamento === 'pix') { Pedido #{{ pedido.id }} pago via Pix. }
+        Obrigado pela compra. Total de <strong>{{ pedido.total | currency: 'BRL' }}</strong>. Você pode acompanhar o pedido em "Meus pedidos".
+        @if (pedido.pagamento === 'boleto') { <br>O pedido será liberado após a compensação do boleto. }
+      </div>
+      <div class="d-flex flex-column flex-sm-row gap-2">
+        <a routerLink="/pedidos" class="btn btn-vinho">Meus pedidos</a>
+        <a routerLink="/" class="btn btn-outline-vinho">Voltar à vitrine</a>
+      </div>
+    }
+  } @else if (carrinhoService.itensCarrinho().length === 0) {
+    <p class="text-muted">Sua cesta está vazia.</p>
+    <a routerLink="/" class="btn btn-vinho">Ver vitrine</a>
+  } @else {
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr class="text-vinho">
+            <th>Item</th>
+            <th class="text-center">Qtd</th>
+            <th class="text-end">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of carrinhoService.itensCarrinho(); track item.produto.id) {
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <img [src]="item.produto.foto" [alt]="item.produto.nome" width="48" height="60" class="rounded item-foto" appFotoFallback>
+                  <span>{{ item.produto.nome }}</span>
+                </div>
+              </td>
+              <td class="text-center">
+                <div class="input-group input-group-sm qtd-grupo">
+                  <button class="btn btn-outline-vinho" type="button" (click)="diminuir(item.produto.id, item.quantidade)" aria-label="Diminuir quantidade">-</button>
+                  <input type="text" class="form-control text-center" [value]="item.quantidade" readonly aria-label="Quantidade">
+                  <button class="btn btn-outline-vinho" type="button" (click)="aumentar(item.produto.id, item.quantidade)" aria-label="Aumentar quantidade">+</button>
+                </div>
+              </td>
+              <td class="text-end">{{ item.produto.preco * item.quantidade | currency: 'BRL' }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" class="text-end text-muted">Subtotal</td>
+            <td class="text-end">{{ carrinhoService.totalCarrinho() | currency: 'BRL' }}</td>
+          </tr>
+          <tr>
+            <td colspan="2" class="text-end text-muted">Frete</td>
+            <td class="text-end">
+              @if (carrinhoService.frete() === 0) { <span class="text-success">Grátis</span> } @else { {{ carrinhoService.frete() | currency: 'BRL' }} }
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" class="text-end"><strong>Total</strong></td>
+            <td class="text-end"><strong class="text-vinho">{{ carrinhoService.totalComFrete() | currency: 'BRL' }}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="frete card p-3 mt-2">
+      @if (faltaParaFrete > 0) {
+        <small>Faltam <strong class="text-vinho">{{ faltaParaFrete | currency: 'BRL' }}</strong> para você ganhar <strong>frete grátis</strong>.</small>
+      } @else {
+        <small class="text-success"><i class="bi bi-truck"></i> Você ganhou <strong>frete grátis</strong>!</small>
+      }
+      <div class="progress mt-2" role="progressbar" [attr.aria-valuenow]="progressoFrete" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-bar barra-frete" [style.width.%]="progressoFrete"></div>
+      </div>
+    </div>
+
+    @if (!emEntrega) {
+      <div class="d-flex flex-column flex-sm-row justify-content-end gap-2 mt-4">
+        <button type="button" class="btn btn-outline-vinho" (click)="limparCesta()">Limpar Cesta</button>
+        <button type="button" class="btn btn-vinho" (click)="iniciarEntrega()">Finalizar</button>
+      </div>
+    } @else {
+      <form [formGroup]="formEntrega" (ngSubmit)="confirmarPedido()" novalidate class="card p-4 mt-4">
+        <h2 class="h6 text-vinho brand-font mb-3">Entrega e pagamento</h2>
+        <div class="row g-3">
+          <div class="col-12 col-sm-4">
+            <label class="form-label" for="cep">CEP</label>
+            <input id="cep" type="text" inputmode="numeric" appMascara="cep" class="form-control" placeholder="00000-000" formControlName="cep" [class.is-invalid]="campoInvalido('cep')">
+            <div class="invalid-feedback">Informe um CEP válido.</div>
+          </div>
+          <div class="col-12 col-sm-8">
+            <label class="form-label" for="endereco">Endereço</label>
+            <input id="endereco" type="text" class="form-control" formControlName="endereco" [class.is-invalid]="campoInvalido('endereco')">
+            <div class="invalid-feedback">Informe o endereço.</div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <label class="form-label" for="numero">Número</label>
+            <input id="numero" type="text" class="form-control" formControlName="numero" [class.is-invalid]="campoInvalido('numero')">
+            <div class="invalid-feedback">Número inválido.</div>
+          </div>
+          <div class="col-6 col-sm-3">
+            <label class="form-label" for="uf">UF</label>
+            <input id="uf" type="text" maxlength="2" class="form-control text-uppercase" formControlName="uf" [class.is-invalid]="campoInvalido('uf')">
+            <div class="invalid-feedback">Use 2 letras.</div>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="cidade">Cidade</label>
+            <input id="cidade" type="text" class="form-control" formControlName="cidade" [class.is-invalid]="campoInvalido('cidade')">
+            <div class="invalid-feedback">Informe a cidade.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="pagamento">Forma de pagamento</label>
+            <select id="pagamento" class="form-select" formControlName="pagamento" [class.is-invalid]="campoInvalido('pagamento')">
+              <option value="" disabled>Selecione...</option>
+              <option value="pix">Pix</option>
+              <option value="cartao">Cartão de crédito</option>
+              <option value="boleto">Boleto</option>
+            </select>
+            <div class="invalid-feedback">Escolha uma forma de pagamento.</div>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input id="salvarEndereco" type="checkbox" class="form-check-input" formControlName="salvarEndereco">
+              <label class="form-check-label" for="salvarEndereco">Salvar este endereço no meu perfil.</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input id="maioridade" type="checkbox" class="form-check-input" formControlName="maioridade" [class.is-invalid]="campoInvalido('maioridade')">
+              <label class="form-check-label" for="maioridade">Declaro ter 18 anos ou mais e que a entrega será recebida por um maior de idade.</label>
+              <div class="invalid-feedback">É necessário ser maior de idade para comprar bebidas alcoólicas.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex flex-column flex-sm-row justify-content-end gap-2 mt-4">
+          <button type="button" class="btn btn-outline-vinho" (click)="voltarParaCesta()">Voltar</button>
+          <button type="submit" class="btn btn-vinho">Confirmar pedido · {{ carrinhoService.totalComFrete() | currency: 'BRL' }}</button>
+        </div>
+      </form>
+    }
+  }
+</main>

@@ -1,0 +1,80 @@
+<header class="border-bottom bg-white sticky-top shadow-sm">
+  <div class="container py-3">
+    <div class="row align-items-center g-3">
+
+      <div class="col-6 col-md-2">
+        <a routerLink="/" class="d-flex align-items-center text-decoration-none" aria-label="Di Vino - página inicial">
+          <app-logo [altura]="42"></app-logo>
+        </a>
+      </div>
+
+      <div class="col-12 col-md-7 order-3 order-md-2">
+        <form class="input-group" (ngSubmit)="buscar()">
+          <input
+            type="search"
+            class="form-control"
+            placeholder="Buscar por vinho, uva, país..."
+            [(ngModel)]="termoBusca"
+            name="termoBusca"
+            aria-label="Buscar produtos"
+          >
+          <button class="btn btn-vinho" type="submit">
+            <i class="bi bi-search"></i> OK
+          </button>
+        </form>
+      </div>
+
+      <div class="col-6 col-md-3 order-2 order-md-3">
+        <div class="d-flex justify-content-end align-items-center gap-3">
+          <a routerLink="/cesta" class="position-relative text-vinho fs-4" aria-label="Ver cesta">
+            <i class="bi bi-basket"></i>
+            @if (carrinhoService.totalItens() > 0) {
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-vinho badge-cesta">
+                {{ carrinhoService.totalItens() }}
+              </span>
+            }
+          </a>
+
+          @if (authService.usuarioLogado(); as usuario) {
+            <div class="position-relative">
+              <button type="button" class="btn btn-link text-vinho text-center usuario-link p-0" (click)="menuAberto = !menuAberto" [attr.aria-expanded]="menuAberto" aria-haspopup="true">
+                <i class="bi bi-person-check-fill fs-4 d-block"></i>
+                <small>{{ primeiroNome(usuario.nome) }}</small>
+              </button>
+              @if (menuAberto) {
+                <div class="menu-usuario shadow" role="menu">
+                  <div class="px-3 py-2 border-bottom small text-muted text-truncate">{{ usuario.email }}</div>
+                  <a routerLink="/perfil" role="menuitem" (click)="menuAberto = false"><i class="bi bi-person"></i> Meu perfil</a>
+                  <a routerLink="/pedidos" role="menuitem" (click)="menuAberto = false"><i class="bi bi-bag"></i> Meus pedidos</a>
+                  <button type="button" role="menuitem" (click)="sair()"><i class="bi bi-box-arrow-right"></i> Sair</button>
+                </div>
+              }
+            </div>
+          } @else {
+            <a routerLink="/login" class="text-vinho text-center usuario-link">
+              <i class="bi bi-person fs-4 d-block"></i>
+              <small>Cadastro</small>
+            </a>
+          }
+        </div>
+      </div>
+    </div>
+
+    <nav class="mt-2 pt-2 border-top">
+      <ul class="nav justify-content-center flex-wrap">
+        <li class="nav-item">
+          <a class="nav-link text-vinho" routerLink="/" [queryParams]="{ tipo: 'Tinto' }">Tintos</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-vinho" routerLink="/" [queryParams]="{ tipo: 'Branco' }">Brancos</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-vinho" routerLink="/" [queryParams]="{ tipo: 'Rosé' }">Rosés</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-vinho" routerLink="/" [queryParams]="{ tipo: 'Espumante' }">Espumantes</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>

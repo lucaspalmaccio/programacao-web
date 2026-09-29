@@ -1,0 +1,27 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(20, 5, 10, 0.65);
+  backdrop-filter: blur(2px);
+}
+
+.caixa {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+}
+
+.fechar {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+}
+
+@media (max-width: 575.98px) {
+  .caixa { padding: 1.25rem !important; }
+}

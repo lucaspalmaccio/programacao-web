@@ -1,0 +1,17 @@
+.chip {
+  padding: 0.35rem 1rem;
+  border: 1px solid var(--vinho-bordo);
+  border-radius: 2rem;
+  font-size: 0.85rem;
+  color: var(--vinho-bordo);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.chip:hover,
+.chip.ativo {
+  background-color: var(--vinho-bordo);
+  color: #fff;
+}
+
+@media (max-width: 575.98px) {
+  .chip { padding: 0.3rem 0.8rem; font-size: 0.8rem; }
+}

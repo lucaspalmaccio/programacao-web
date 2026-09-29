@@ -1,0 +1,132 @@
+// Bootstrap modular (sem forms/floating-labels, que gera aviso no build)
+@import "bootstrap/scss/functions";
+@import "bootstrap/scss/variables";
+@import "bootstrap/scss/variables-dark";
+@import "bootstrap/scss/maps";
+@import "bootstrap/scss/mixins";
+@import "bootstrap/scss/utilities";
+@import "bootstrap/scss/root";
+@import "bootstrap/scss/reboot";
+@import "bootstrap/scss/type";
+@import "bootstrap/scss/images";
+@import "bootstrap/scss/containers";
+@import "bootstrap/scss/grid";
+@import "bootstrap/scss/tables";
+@import "bootstrap/scss/forms/labels";
+@import "bootstrap/scss/forms/form-text";
+@import "bootstrap/scss/forms/form-control";
+@import "bootstrap/scss/forms/form-select";
+@import "bootstrap/scss/forms/form-check";
+@import "bootstrap/scss/forms/form-range";
+@import "bootstrap/scss/forms/input-group";
+@import "bootstrap/scss/forms/validation";
+@import "bootstrap/scss/buttons";
+@import "bootstrap/scss/transitions";
+@import "bootstrap/scss/dropdown";
+@import "bootstrap/scss/button-group";
+@import "bootstrap/scss/nav";
+@import "bootstrap/scss/navbar";
+@import "bootstrap/scss/card";
+@import "bootstrap/scss/badge";
+@import "bootstrap/scss/alert";
+@import "bootstrap/scss/list-group";
+@import "bootstrap/scss/close";
+@import "bootstrap/scss/progress";
+@import "bootstrap/scss/spinners";
+@import "bootstrap/scss/helpers";
+@import "bootstrap/scss/utilities/api";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+:root {
+  --vinho-bordo: #5c1a2e;
+  --vinho-bordo-escuro: #3d0f1e;
+  --vinho-dourado: #c9a24b;
+  --vinho-creme: #faf6f0;
+  --vinho-texto: #2b2b2b;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--vinho-creme);
+  color: var(--vinho-texto);
+}
+
+h1, h2, h3, .brand-font {
+  font-family: 'Playfair Display', serif;
+}
+
+.btn-vinho {
+  background-color: var(--vinho-bordo);
+  border-color: var(--vinho-bordo);
+  color: #fff;
+}
+.btn-vinho:hover {
+  background-color: var(--vinho-bordo-escuro);
+  border-color: var(--vinho-bordo-escuro);
+  color: #fff;
+}
+
+.btn-outline-vinho {
+  border-color: var(--vinho-bordo);
+  color: var(--vinho-bordo);
+}
+.btn-outline-vinho:hover {
+  background-color: var(--vinho-bordo);
+  color: #fff;
+}
+
+.text-vinho {
+  color: var(--vinho-bordo) !important;
+}
+
+.text-dourado {
+  color: var(--vinho-dourado) !important;
+}
+
+.bg-vinho {
+  background-color: var(--vinho-bordo) !important;
+}
+
+a {
+  text-decoration: none;
+}
+
+.card-produto {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid #e7ddd2;
+}
+.card-produto:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(92, 26, 46, 0.12);
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--vinho-bordo);
+  box-shadow: 0 0 0 0.2rem rgba(92, 26, 46, 0.15);
+}
+
+.is-invalid ~ .invalid-feedback,
+.was-validated .form-control:invalid ~ .invalid-feedback {
+  display: block;
+}
+
+// Responsivo
+// Fotos de qualquer proporção: caixa fixa, imagem inteira (sem cortar nem esticar)
+.produto-foto {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: contain;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+@media (max-width: 767.98px) {
+  main.container { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+  h1, .h1 { font-size: 1.5rem; }
+  .card-produto:hover { transform: none; }
+  .btn { padding-top: 0.6rem; padding-bottom: 0.6rem; }
+}
+
+@media (max-width: 575.98px) {
+  .table { font-size: 0.85rem; }
+}

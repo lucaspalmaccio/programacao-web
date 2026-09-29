@@ -1,0 +1,67 @@
+<main class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div>
+      <h2 class="h5 text-vinho mb-0">{{ tipoSelecionado ? tipoSelecionado + 's' : 'Vitrine' }}</h2>
+      <small class="text-muted">{{ produtos.length }} {{ produtos.length === 1 ? 'vinho' : 'vinhos' }}</small>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card p-3 mb-4">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <a routerLink="/" class="chip" [class.ativo]="!tipoSelecionado">Todos</a>
+      @for (tipo of tipos; track tipo) {
+        <a routerLink="/" [queryParams]="{ tipo: tipo }" class="chip" [class.ativo]="tipoSelecionado === tipo">{{ tipo }}</a>
+      }
+    </div>
+
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-sm-4">
+        <label class="form-label small mb-1" for="filtroPais">País</label>
+        <select id="filtroPais" class="form-select form-select-sm" [value]="paisSelecionado" (change)="aoMudarPais($event)">
+          <option value="">Todos</option>
+          @for (pais of paises; track pais) {
+            <option [value]="pais">{{ pais }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-12 col-sm-4">
+        <label class="form-label small mb-1" for="ordenar">Ordenar por</label>
+        <select id="ordenar" class="form-select form-select-sm" [value]="ordem" (change)="aoMudarOrdem($event)">
+          <option value="relevancia">Relevância</option>
+          <option value="menor">Menor preço</option>
+          <option value="maior">Maior preço</option>
+          <option value="nome">Nome (A-Z)</option>
+        </select>
+      </div>
+      <div class="col-12 col-sm-4 d-flex gap-2">
+        <button
+          type="button"
+          class="btn btn-sm flex-fill"
+          [class.btn-vinho]="somenteFavoritos"
+          [class.btn-outline-vinho]="!somenteFavoritos"
+          [attr.aria-pressed]="somenteFavoritos"
+          (click)="alternarFavoritos()"
+        >
+          <i class="bi bi-heart-fill"></i> Favoritos ({{ favoritos.ids().length }})
+        </button>
+        @if (filtrosAtivos) {
+          <button type="button" class="btn btn-sm btn-link text-vinho" (click)="limparFiltros()">Limpar</button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    @for (produto of produtos; track produto.id) {
+      <div class="col-6 col-md-4 col-lg-3">
+        <app-produto-card [produto]="produto"></app-produto-card>
+      </div>
+    } @empty {
+      <div class="col-12 text-center py-5">
+        <p class="text-muted mb-3">Nenhum vinho encontrado com esses filtros.</p>
+        <button type="button" class="btn btn-outline-vinho" (click)="limparFiltros()">Limpar filtros</button>
+      </div>
+    }
+  </div>
+</main>

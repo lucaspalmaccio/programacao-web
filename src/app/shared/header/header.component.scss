@@ -1,0 +1,32 @@
+.badge-cesta { font-size: 0.6rem; }
+.usuario-link { line-height: 1; small { font-size: 0.65rem; } }
+
+@media (max-width: 767.98px) {
+  nav .nav-link { padding: 0.4rem 0.6rem; font-size: 0.9rem; }
+}
+
+header { z-index: 1030; }
+
+.menu-usuario {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 1040;
+  min-width: 200px;
+  margin-top: 0.5rem;
+  border: 1px solid #e7ddd2;
+  border-radius: 0.5rem;
+  background: #fff;
+
+  a, button {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border: 0;
+    background: none;
+    color: var(--vinho-bordo);
+    text-align: left;
+    font-size: 0.9rem;
+  }
+  a:hover, button:hover { background: var(--vinho-creme); }
+}

@@ -12,7 +12,13 @@ function dataHa(anos: number, dias = 0): string {
   const d = new Date();
   d.setFullYear(d.getFullYear() - anos);
   d.setDate(d.getDate() + dias);
-  return d.toISOString().slice(0, 10);
+  return dataLocal(d);
+}
+
+/** yyyy-MM-dd no fuso local (toISOString usaria UTC e viraria o dia à noite). */
+export function dataLocal(d: Date): string {
+  const dois = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${dois(d.getMonth() + 1)}-${dois(d.getDate())}`;
 }
 
 describe('Validadores', () => {

@@ -10,6 +10,7 @@ import { CarrinhoService } from './services/carrinho.service';
 import { PedidoService } from './services/pedido.service';
 import { ProdutoService } from './services/produto.service';
 import { provideApiFalsa } from './testing/api-falsa';
+import { dataLocal } from './shared/validators.spec';
 
 registerLocaleData(localePt);
 
@@ -287,7 +288,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       fixture.detectChanges();
       digitar('#nome', 'Joao');
       digitar('#cpf', '11111111111');
-      digitar('#nascimento', new Date().toISOString().slice(0, 10));
+      digitar('#nascimento', dataLocal(new Date()));
       digitar('#senha', 'abc');
       digitar('#confirmaSenha', 'xyz');
       textoBotao('Cadastrar')!.click();

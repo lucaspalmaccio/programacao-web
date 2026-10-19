@@ -4,6 +4,7 @@ import { CarrinhoService } from './carrinho.service';
 import { FavoritosService } from './favoritos.service';
 import { PedidoService } from './pedido.service';
 import { ProdutoService } from './produto.service';
+import { provideApiFalsa } from '../testing/api-falsa';
 
 const novo = {
   nome: 'Maria Silva',
@@ -16,7 +17,13 @@ const novo = {
 
 function limpar(): void {
   localStorage.clear();
+  recarregar();
+}
+
+/** Recria o módulo de teste (como recarregar a página) com a API em memória. */
+function recarregar(): void {
   TestBed.resetTestingModule();
+  TestBed.configureTestingModule({ providers: [provideApiFalsa()] });
 }
 
 describe('ProdutoService', () => {
@@ -47,13 +54,14 @@ describe('ProdutoService', () => {
 describe('AuthService', () => {
   beforeEach(limpar);
 
-  it('cadastra, abre sessão e guarda hash (nunca a senha)', async () => {
+  it('cadastra pela API, abre sessão e nunca guarda a senha no navegador', async () => {
     const auth = TestBed.inject(AuthService);
     const r = await auth.cadastrar(novo);
     expect(r.ok).toBeTrue();
     expect(auth.usuarioLogado()?.email).toBe('maria@exemplo.com');
-    expect(localStorage.getItem('vinho-usuarios')).not.toContain('senha1234');
-    expect(localStorage.getItem('vinho-sessao')).not.toContain('senhaHash');
+    expect(auth.usuarioLogado()?.id).toBe(1);
+    expect(auth.usuarioLogado()?.cpf).toBe('529.982.247-25');
+    expect(localStorage.getItem('vinho-sessao')).not.toContain('senha1234');
   });
 
   it('bloqueia e-mail e CPF duplicados', async () => {
@@ -81,10 +89,10 @@ describe('AuthService', () => {
   it('mantém a sessão ao recarregar e apaga ao sair', async () => {
     const auth = TestBed.inject(AuthService);
     await auth.cadastrar(novo);
-    TestBed.resetTestingModule();
+    recarregar();
     expect(TestBed.inject(AuthService).usuarioLogado()?.nome).toBe('Maria Silva');
     TestBed.inject(AuthService).logout();
-    TestBed.resetTestingModule();
+    recarregar();
     expect(TestBed.inject(AuthService).usuarioLogado()).toBeNull();
   });
 
@@ -92,7 +100,7 @@ describe('AuthService', () => {
     const auth = TestBed.inject(AuthService);
     await auth.cadastrar(novo);
     const endereco = { cep: '01310-100', endereco: 'Av. Paulista', numero: '1000', cidade: 'São Paulo', uf: 'SP' };
-    expect(auth.atualizarPerfil({ nome: 'Maria Souza', endereco }).ok).toBeTrue();
+    expect((await auth.atualizarPerfil({ nome: 'Maria Souza', endereco })).ok).toBeTrue();
     expect(auth.usuarioLogado()?.nome).toBe('Maria Souza');
     expect(auth.usuarioLogado()?.endereco?.cidade).toBe('São Paulo');
   });
@@ -109,7 +117,7 @@ describe('AuthService', () => {
 
   it('não altera perfil nem senha sem estar logado', async () => {
     const auth = TestBed.inject(AuthService);
-    expect(auth.atualizarPerfil({ nome: 'X Y' }).ok).toBeFalse();
+    expect((await auth.atualizarPerfil({ nome: 'X Y' })).ok).toBeFalse();
     expect((await auth.alterarSenha('a', 'b')).ok).toBeFalse();
   });
 });
@@ -185,31 +193,30 @@ describe('PedidoService', () => {
   beforeEach(limpar);
 
   const base = {
-    emailUsuario: 'a@a.com',
-    itens: [],
-    subtotal: 100,
+    clienteId: 1,
+    itens: [{ produtoId: 3, nome: 'Casal Garcia', foto: 'vinhos/x.webp', preco: 50, quantidade: 2 }],
     frete: 0,
-    total: 100,
     endereco: { cep: '01310-100', endereco: 'Rua A', numero: '1', cidade: 'SP', uf: 'SP' },
     pagamento: 'pix'
   };
 
-  it('numera a partir de 1001 e lista só os pedidos do usuário, do mais novo ao mais antigo', () => {
+  it('grava pela API, calcula o total e lista só os pedidos do cliente, do mais novo ao mais antigo', async () => {
     const s = TestBed.inject(PedidoService);
-    const p1 = s.criar(base);
-    const p2 = s.criar(base);
-    s.criar({ ...base, emailUsuario: 'b@b.com' });
-    expect(p1.id).toBe(1001);
-    expect(p2.id).toBe(1002);
-    expect(s.doUsuario('a@a.com').map(p => p.id)).toEqual([1002, 1001]);
-    expect(s.doUsuario('b@b.com').length).toBe(1);
+    const p1 = await s.criar(base);
+    const p2 = await s.criar(base);
+    await s.criar({ ...base, clienteId: 2 });
+    expect(p1.total).toBe(100);
+    expect(p1.endereco.cep).toBe('01310-100');
+    expect((await s.doCliente(1)).map(p => p.id)).toEqual([p2.id, p1.id]);
+    expect((await s.doCliente(2)).length).toBe(1);
   });
 
-  it('atualiza o status', () => {
+  it('atualiza o status', async () => {
     const s = TestBed.inject(PedidoService);
-    const p = s.criar(base, 'Aguardando pagamento');
-    s.atualizarStatus(p.id, 'Pagamento confirmado');
-    expect(s.doUsuario('a@a.com')[0].status).toBe('Pagamento confirmado');
+    const p = await s.criar(base, 'Aguardando pagamento');
+    expect(p.status).toBe('Aguardando pagamento');
+    await s.atualizarStatus(p.id, 'Pagamento confirmado');
+    expect((await s.doCliente(1))[0].status).toBe('Pagamento confirmado');
   });
 });
 

@@ -9,6 +9,7 @@ import { AuthService } from './services/auth.service';
 import { CarrinhoService } from './services/carrinho.service';
 import { PedidoService } from './services/pedido.service';
 import { ProdutoService } from './services/produto.service';
+import { provideApiFalsa } from './testing/api-falsa';
 
 registerLocaleData(localePt);
 
@@ -66,7 +67,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [provideRouter(routes), { provide: LOCALE_ID, useValue: 'pt-BR' }]
+      providers: [provideRouter(routes), provideApiFalsa(), { provide: LOCALE_ID, useValue: 'pt-BR' }]
     });
     fixture = TestBed.createComponent(AppComponent);
     router = TestBed.inject(Router);
@@ -278,7 +279,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       textoBotao('Cadastrar')!.click();
       fixture.detectChanges();
       expect(qa('#cadastroEmail ~ .invalid-feedback, #cpf ~ .invalid-feedback, #nome ~ .invalid-feedback').length).toBe(3);
-      expect(localStorage.getItem('vinho-usuarios')).toBeNull();
+      expect(TestBed.inject(AuthService).usuarioLogado()).toBeNull();
     });
 
     it('cadastro exige 18 anos, CPF válido, senha forte e senhas iguais', () => {
@@ -435,7 +436,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       expect(router.url).toBe('/login?returnUrl=%2Fcesta');
       expect(q('.alert-warning')!.textContent).toContain('finalizar a compra');
       expect(carrinho().totalItens()).toBe(1);
-      expect(localStorage.getItem('vinho-pedidos')).toBeNull();
+      expect(await TestBed.inject(PedidoService).doCliente(1)).toEqual([]);
     });
 
     it('logado: valida o formulário de entrega antes de criar o pedido', async () => {
@@ -445,9 +446,9 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       textoBotao('Finalizar')!.click();
       fixture.detectChanges();
       textoBotao('Confirmar pedido')!.click();
-      fixture.detectChanges();
+      await estabilizar();
       expect(qa('form .invalid-feedback').length).toBeGreaterThanOrEqual(6);
-      expect(localStorage.getItem('vinho-pedidos')).toBeNull();
+      expect(await TestBed.inject(PedidoService).doCliente(1)).toEqual([]);
     });
 
     async function preencherEntrega(pagamento: string): Promise<void> {
@@ -472,15 +473,15 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       fixture.detectChanges();
       await preencherEntrega('cartao');
       textoBotao('Confirmar pedido')!.click();
-      fixture.detectChanges();
+      await estabilizar();
 
-      const pedidos = TestBed.inject(PedidoService).doUsuario(usuario.email);
+      const pedidos = await TestBed.inject(PedidoService).doCliente(1);
       expect(pedidos.length).toBe(1);
       expect(pedidos[0].status).toBe('Pagamento aprovado');
       expect(pedidos[0].endereco.cep).toBe('01310-100');
       expect(pedidos[0].endereco.uf).toBe('SP');
       expect(pedidos[0].total).toBeCloseTo(produtos()[0].preco + carrinho().valorFrete, 2);
-      expect(q('.alert-success')!.textContent).toContain('Pedido #1001');
+      expect(q('.alert-success')!.textContent).toContain('Pedido #1');
       expect(carrinho().totalItens()).toBe(0);
       expect(auth.usuarioLogado()?.endereco?.cidade).toBe('São Paulo');
     });
@@ -488,7 +489,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
     it('próximo pedido já vem com o endereço salvo preenchido', async () => {
       const auth = TestBed.inject(AuthService);
       await auth.cadastrar(usuario);
-      auth.atualizarPerfil({ endereco: { cep: '01310-100', endereco: 'Avenida Paulista', numero: '1000', cidade: 'São Paulo', uf: 'SP' } });
+      await auth.atualizarPerfil({ endereco: { cep: '01310-100', endereco: 'Avenida Paulista', numero: '1000', cidade: 'São Paulo', uf: 'SP' } });
       carrinho().adicionar(produtos()[0]);
       await ir('/cesta');
       textoBotao('Finalizar')!.click();
@@ -506,6 +507,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       fixture.detectChanges();
       await preencherEntrega('pix');
       textoBotao('Confirmar pedido')!.click();
+      await pausa(150); // sem whenStable: ele esperaria o relógio do Pix terminar
       fixture.detectChanges();
 
       expect(q('.pix')!.textContent).toContain('Pague com Pix');
@@ -513,14 +515,14 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       expect(qa('app-pix-qr rect').length).toBeGreaterThan(100);
       expect(q('.pix')!.textContent).toContain('Aguardando pagamento');
       expect(q('.pix')!.textContent).toMatch(/0[45]:\d\d/);
-      expect(q<HTMLInputElement>('#codigoPix')!.value).toContain('divino-simulado-1001');
-      expect(TestBed.inject(PedidoService).doUsuario(usuario.email)[0].status).toBe('Aguardando pagamento');
+      expect(q<HTMLInputElement>('#codigoPix')!.value).toContain('divino-simulado-1');
+      expect((await TestBed.inject(PedidoService).doCliente(1))[0].status).toBe('Aguardando pagamento');
 
       await pausa(10500);
       fixture.detectChanges();
       expect(q('.pix')).toBeNull();
       expect(q('.alert-success')!.textContent).toContain('Pagamento confirmado');
-      expect(TestBed.inject(PedidoService).doUsuario(usuario.email)[0].status).toBe('Pagamento confirmado');
+      expect((await TestBed.inject(PedidoService).doCliente(1))[0].status).toBe('Pagamento confirmado');
     }, 25000);
 
     it('o QR Code é o mesmo para o mesmo pedido e diferente entre pedidos', async () => {
@@ -543,8 +545,8 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       fixture.detectChanges();
       await preencherEntrega('boleto');
       textoBotao('Confirmar pedido')!.click();
-      fixture.detectChanges();
-      expect(TestBed.inject(PedidoService).doUsuario(usuario.email)[0].status).toBe('Aguardando pagamento');
+      await estabilizar();
+      expect((await TestBed.inject(PedidoService).doCliente(1))[0].status).toBe('Aguardando pagamento');
       expect(q('.alert-success')!.textContent).toContain('boleto');
     });
 
@@ -570,7 +572,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       expect(q<HTMLInputElement>('#pEmail')!.disabled).toBeTrue();
       digitar('#pNome', 'Maria Souza Lima');
       textoBotao('Salvar dados')!.click();
-      fixture.detectChanges();
+      await estabilizar();
       expect(TestBed.inject(AuthService).usuarioLogado()?.nome).toBe('Maria Souza Lima');
     });
 
@@ -578,7 +580,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       await ir('/perfil');
       digitar('#pNome', 'Maria');
       textoBotao('Salvar dados')!.click();
-      fixture.detectChanges();
+      await estabilizar();
       expect(TestBed.inject(AuthService).usuarioLogado()?.nome).toBe('Maria Silva');
     });
 
@@ -586,7 +588,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       await ir('/perfil');
       digitar('#eCep', '123');
       textoBotao('Salvar endereço')!.click();
-      fixture.detectChanges();
+      await estabilizar();
       expect(TestBed.inject(AuthService).usuarioLogado()?.endereco).toBeUndefined();
       digitar('#eCep', '01310100');
       digitar('#eEndereco', 'Avenida Paulista');
@@ -594,7 +596,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       digitar('#eUf', 'sp');
       digitar('#eCidade', 'São Paulo');
       textoBotao('Salvar endereço')!.click();
-      fixture.detectChanges();
+      await estabilizar();
       expect(TestBed.inject(AuthService).usuarioLogado()?.endereco?.uf).toBe('SP');
     });
 
@@ -632,19 +634,19 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
 
     it('Meus pedidos: vazio e com histórico', async () => {
       await ir('/pedidos');
+      await estabilizar();
       expect(q('main')!.textContent).toContain('ainda não fez nenhum pedido');
-      TestBed.inject(PedidoService).criar({
-        emailUsuario: usuario.email,
+      await TestBed.inject(PedidoService).criar({
+        clienteId: 1,
         itens: [{ produtoId: 9, nome: 'Undurraga', foto: 'vinhos/x.png', preco: 69.9, quantidade: 2 }],
-        subtotal: 139.8,
         frete: 24.9,
-        total: 164.7,
         endereco: { cep: '01310-100', endereco: 'Rua A', numero: '1', cidade: 'São Paulo', uf: 'SP' },
         pagamento: 'pix'
       }, 'Pagamento confirmado');
       await ir('/');
       await ir('/pedidos');
-      expect(q('main')!.textContent).toContain('Pedido #1001');
+      await estabilizar();
+      expect(q('main')!.textContent).toContain('Pedido #1');
       expect(q('main')!.textContent).toContain('Pagamento confirmado');
       expect(q('main')!.textContent).toContain('164,70');
     });

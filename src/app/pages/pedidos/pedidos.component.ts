@@ -19,11 +19,20 @@ const ROTULOS_PAGAMENTO: Record<string, string> = {
   styleUrl: './pedidos.component.scss'
 })
 export class PedidosComponent {
-  pedidos: Pedido[];
+  pedidos: Pedido[] = [];
+  carregando = true;
+  erro = '';
 
   constructor(authService: AuthService, pedidoService: PedidoService) {
     const usuario = authService.usuarioLogado();
-    this.pedidos = usuario ? pedidoService.doUsuario(usuario.email) : [];
+    if (!usuario) {
+      this.carregando = false;
+      return;
+    }
+    pedidoService.doCliente(usuario.id)
+      .then(lista => (this.pedidos = lista))
+      .catch(() => (this.erro = 'Não foi possível carregar seus pedidos.'))
+      .finally(() => (this.carregando = false));
   }
 
   pagamento(codigo: string): string {

@@ -12,6 +12,7 @@ import br.com.divino.loja.entity.Endereco;
 import br.com.divino.loja.exception.ConflitoException;
 import br.com.divino.loja.exception.RecursoNaoEncontradoException;
 import br.com.divino.loja.repository.ClienteRepository;
+import br.com.divino.loja.repository.PedidoRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,10 +26,12 @@ import java.util.Locale;
 public class ClienteService {
 
     private final ClienteRepository repository;
+    private final PedidoRepository pedidos;
     private final PasswordEncoder passwordEncoder;
 
-    public ClienteService(ClienteRepository repository, PasswordEncoder passwordEncoder) {
+    public ClienteService(ClienteRepository repository, PedidoRepository pedidos, PasswordEncoder passwordEncoder) {
         this.repository = repository;
+        this.pedidos = pedidos;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -80,7 +83,11 @@ public class ClienteService {
     }
 
     public void excluir(Long id) {
-        repository.delete(obter(id));
+        Cliente cliente = obter(id);
+        if (pedidos.existsByClienteId(id)) {
+            throw new ConflitoException("Cliente possui pedidos e não pode ser excluído.");
+        }
+        repository.delete(cliente);
     }
 
     private Cliente obter(Long id) {

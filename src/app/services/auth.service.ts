@@ -1,6 +1,9 @@
 import { Injectable, signal } from '@angular/core';
-import { apenasDigitos } from '../shared/validators';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { gravarJson, lerJson, removerChave } from './armazenamento';
+import { API_URL, mensagemDeErro } from './api';
+import { aplicarMascara } from '../shared/mascara.directive';
 
 export interface Endereco {
   cep: string;
@@ -11,16 +14,13 @@ export interface Endereco {
 }
 
 export interface Usuario {
+  id: number;
   nome: string;
   email: string;
   cpf: string;
   telefone: string;
   nascimento: string;
   endereco?: Endereco;
-}
-
-interface Registro extends Usuario {
-  senhaHash: string;
 }
 
 export interface NovoUsuario {
@@ -37,55 +37,42 @@ export interface Resultado {
   erro?: string;
 }
 
-const CHAVE_USUARIOS = 'vinho-usuarios';
 const CHAVE_SESSAO = 'vinho-sessao';
 
 /**
- * Autenticação simulada para fins acadêmicos: as contas ficam no navegador
- * (localStorage) e a senha é guardada como hash SHA-256. Em um sistema real
- * isso seria feito por uma API com back-end.
+ * Autenticação feita pela API (backend/). Cadastro, login, perfil e senha ficam
+ * no banco; no navegador guardamos só os dados do cliente logado (sem senha).
  */
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
 
+  private readonly url = `${API_URL}/clientes`;
+
   usuarioLogado = signal<Usuario | null>(this.restaurarSessao());
 
+  constructor(private http: HttpClient) {}
+
   async cadastrar(dados: NovoUsuario): Promise<Resultado> {
-    const email = dados.email.trim().toLowerCase();
-    const cpf = apenasDigitos(dados.cpf);
-    const usuarios = this.listarRegistros();
-
-    if (usuarios.some(u => u.email === email)) {
-      return { ok: false, erro: 'Já existe uma conta com esse e-mail.' };
-    }
-    if (usuarios.some(u => apenasDigitos(u.cpf) === cpf)) {
-      return { ok: false, erro: 'Já existe uma conta com esse CPF.' };
-    }
-
-    const registro: Registro = {
-      nome: dados.nome.trim(),
-      email,
-      cpf: dados.cpf,
-      telefone: dados.telefone,
-      nascimento: dados.nascimento,
-      senhaHash: await this.gerarHash(email, dados.senha)
-    };
-    gravarJson(CHAVE_USUARIOS, [...usuarios, registro]);
-    this.abrirSessao(registro);
-    return { ok: true };
+    return this.executar(async () => {
+      const cliente = await firstValueFrom(this.http.post<Usuario>(this.url, {
+        ...dados,
+        nome: dados.nome.trim(),
+        email: dados.email.trim().toLowerCase()
+      }));
+      this.abrirSessao(cliente);
+    });
   }
 
   async login(email: string, senha: string): Promise<Resultado> {
-    const chave = email.trim().toLowerCase();
-    const registro = this.listarRegistros().find(u => u.email === chave);
-    const hash = await this.gerarHash(chave, senha);
-    if (!registro || registro.senhaHash !== hash) {
-      return { ok: false, erro: 'E-mail ou senha incorretos.' };
-    }
-    this.abrirSessao(registro);
-    return { ok: true };
+    return this.executar(async () => {
+      const cliente = await firstValueFrom(this.http.post<Usuario>(`${this.url}/login`, {
+        email: email.trim().toLowerCase(),
+        senha
+      }));
+      this.abrirSessao(cliente);
+    });
   }
 
   logout(): void {
@@ -93,35 +80,26 @@ export class AuthService {
     removerChave(CHAVE_SESSAO);
   }
 
-  atualizarPerfil(alteracoes: Partial<Pick<Usuario, 'nome' | 'telefone' | 'nascimento' | 'endereco'>>): Resultado {
+  async atualizarPerfil(alteracoes: Partial<Pick<Usuario, 'nome' | 'telefone' | 'nascimento' | 'endereco'>>): Promise<Resultado> {
     const atual = this.usuarioLogado();
     if (!atual) {
       return { ok: false, erro: 'Você precisa estar logado.' };
     }
-    const usuarios = this.listarRegistros();
-    const indice = usuarios.findIndex(u => u.email === atual.email);
-    if (indice < 0) {
-      return { ok: false, erro: 'Conta não encontrada.' };
-    }
-    usuarios[indice] = { ...usuarios[indice], ...alteracoes };
-    gravarJson(CHAVE_USUARIOS, usuarios);
-    this.abrirSessao(usuarios[indice]);
-    return { ok: true };
+    return this.executar(async () => {
+      const { id, ...cadastro } = { ...atual, ...alteracoes };
+      const cliente = await firstValueFrom(this.http.put<Usuario>(`${this.url}/${id}`, cadastro));
+      this.abrirSessao(cliente);
+    });
   }
 
   async alterarSenha(senhaAtual: string, novaSenha: string): Promise<Resultado> {
     const atual = this.usuarioLogado();
-    const usuarios = this.listarRegistros();
-    const indice = usuarios.findIndex(u => u.email === atual?.email);
-    if (!atual || indice < 0) {
+    if (!atual) {
       return { ok: false, erro: 'Você precisa estar logado.' };
     }
-    if (usuarios[indice].senhaHash !== await this.gerarHash(atual.email, senhaAtual)) {
-      return { ok: false, erro: 'A senha atual está incorreta.' };
-    }
-    usuarios[indice].senhaHash = await this.gerarHash(atual.email, novaSenha);
-    gravarJson(CHAVE_USUARIOS, usuarios);
-    return { ok: true };
+    return this.executar(async () => {
+      await firstValueFrom(this.http.put<void>(`${this.url}/${atual.id}/senha`, { senhaAtual, novaSenha }));
+    });
   }
 
   solicitarRecuperacaoSenha(email: string): boolean {
@@ -129,31 +107,29 @@ export class AuthService {
     return !!email;
   }
 
-  private abrirSessao(registro: Registro): void {
-    const { senhaHash, ...usuario } = registro;
+  private async executar(acao: () => Promise<void>): Promise<Resultado> {
+    try {
+      await acao();
+      return { ok: true };
+    } catch (erro) {
+      return { ok: false, erro: mensagemDeErro(erro) };
+    }
+  }
+
+  /** A API guarda só dígitos; na tela mostramos CPF, telefone e CEP com máscara. */
+  private abrirSessao(cliente: Usuario): void {
+    const usuario: Usuario = {
+      ...cliente,
+      cpf: aplicarMascara(cliente.cpf, 'cpf'),
+      telefone: aplicarMascara(cliente.telefone, 'telefone'),
+      endereco: cliente.endereco && { ...cliente.endereco, cep: aplicarMascara(cliente.endereco.cep, 'cep') }
+    };
     this.usuarioLogado.set(usuario);
     gravarJson(CHAVE_SESSAO, usuario);
   }
 
   private restaurarSessao(): Usuario | null {
     const salvo = lerJson<Usuario | null>(CHAVE_SESSAO, null);
-    if (!salvo) {
-      return null;
-    }
-    // só mantém a sessão se a conta ainda existir
-    return this.listarRegistros().some(u => u.email === salvo.email) ? salvo : null;
-  }
-
-  private listarRegistros(): Registro[] {
-    const lista = lerJson<Registro[]>(CHAVE_USUARIOS, []);
-    return Array.isArray(lista) ? lista : [];
-  }
-
-  private async gerarHash(email: string, senha: string): Promise<string> {
-    const bytes = new TextEncoder().encode(`${email}:${senha}:vinho-e-cia`);
-    const digest = await crypto.subtle.digest('SHA-256', bytes);
-    return Array.from(new Uint8Array(digest))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+    return salvo && typeof salvo.id === 'number' ? salvo : null;
   }
 }

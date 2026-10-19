@@ -47,3 +47,23 @@ Regras:
 - Senha guardada com BCrypt e nunca devolvida.
 - Erros de validação voltam em 400 com `campos` indicando cada campo inválido.
 - O login só confere credenciais; não emite token/sessão (autenticação das demais rotas fica fora do escopo).
+
+## Endpoints — `/api/pedidos`
+
+| Método | Rota | Respostas |
+|---|---|---|
+| GET | `/api/pedidos?clienteId=` | 200 lista (mais recentes primeiro) |
+| GET | `/api/pedidos/{id}` | 200 / 404 |
+| POST | `/api/pedidos` | 201 + `Location` / 400 / 404 (cliente inexistente) |
+| PUT | `/api/pedidos/{id}/status` | 200 / 400 / 404 |
+
+Subtotal e total são calculados no servidor a partir dos itens. Excluir um cliente que tem pedidos devolve 409.
+
+## MySQL (opcional)
+
+Por padrão usa H2. Para MySQL (`localhost:3306`, banco `divino`, ajuste usuário/senha em `application-mysql.properties`):
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=mysql
+```
+

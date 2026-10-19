@@ -39,10 +39,16 @@
       </div>
     </article>
   } @empty {
+    @if (carregando) {
+      <p class="text-muted text-center py-5">Carregando pedidos...</p>
+    } @else if (erro) {
+      <div class="alert alert-danger" role="alert">{{ erro }}</div>
+    } @else {
     <div class="text-center py-5">
       <i class="bi bi-bag fs-1 text-dourado"></i>
       <p class="text-muted my-3">Você ainda não fez nenhum pedido.</p>
       <a routerLink="/" class="btn btn-vinho">Ver vitrine</a>
     </div>
+    }
   }
 </main>

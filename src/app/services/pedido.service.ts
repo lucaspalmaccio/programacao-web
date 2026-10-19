@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { Endereco } from './auth.service';
-import { gravarJson, lerJson } from './armazenamento';
+import { API_URL } from './api';
+import { aplicarMascara } from '../shared/mascara.directive';
 
 export interface ItemPedido {
   produtoId: number;
@@ -13,7 +16,7 @@ export interface ItemPedido {
 export interface Pedido {
   id: number;
   data: string;
-  emailUsuario: string;
+  clienteId: number;
   itens: ItemPedido[];
   subtotal: number;
   frete: number;
@@ -23,38 +26,31 @@ export interface Pedido {
   status: string;
 }
 
-const CHAVE = 'vinho-pedidos';
-
+/** Pedidos gravados no banco pela API; subtotal e total são calculados pelo servidor. */
 @Injectable({
   providedIn: 'root'
 })
 export class PedidoService {
 
-  criar(dados: Omit<Pedido, 'id' | 'data' | 'status'>, status = 'Pedido recebido'): Pedido {
-    const todos = this.todos();
-    const ultimo = todos.reduce((maior, p) => Math.max(maior, p.id), 1000);
-    const pedido: Pedido = {
-      ...dados,
-      id: ultimo + 1,
-      data: new Date().toISOString(),
-      status
-    };
-    gravarJson(CHAVE, [...todos, pedido]);
-    return pedido;
+  private readonly url = `${API_URL}/pedidos`;
+
+  constructor(private http: HttpClient) {}
+
+  async criar(dados: Pick<Pedido, 'clienteId' | 'itens' | 'frete' | 'endereco' | 'pagamento'>, status = 'Pedido recebido'): Promise<Pedido> {
+    return this.formatar(await firstValueFrom(this.http.post<Pedido>(this.url, { ...dados, status })));
   }
 
-  atualizarStatus(id: number, status: string): void {
-    gravarJson(CHAVE, this.todos().map(p => (p.id === id ? { ...p, status } : p)));
+  async atualizarStatus(id: number, status: string): Promise<Pedido> {
+    return this.formatar(await firstValueFrom(this.http.put<Pedido>(`${this.url}/${id}/status`, { status })));
   }
 
-  doUsuario(email: string): Pedido[] {
-    return this.todos()
-      .filter(p => p.emailUsuario === email)
-      .sort((a, b) => b.id - a.id);
+  async doCliente(clienteId: number): Promise<Pedido[]> {
+    const lista = await firstValueFrom(this.http.get<Pedido[]>(this.url, { params: { clienteId } }));
+    return lista.map(p => this.formatar(p));
   }
 
-  private todos(): Pedido[] {
-    const lista = lerJson<Pedido[]>(CHAVE, []);
-    return Array.isArray(lista) ? lista : [];
+  /** A API guarda o CEP só com dígitos; na tela ele aparece com máscara. */
+  private formatar(pedido: Pedido): Pedido {
+    return { ...pedido, endereco: { ...pedido.endereco, cep: aplicarMascara(pedido.endereco.cep, 'cep') } };
   }
 }

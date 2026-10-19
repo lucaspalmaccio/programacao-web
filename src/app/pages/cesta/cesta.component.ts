@@ -6,6 +6,7 @@ import { FotoFallbackDirective } from '../../shared/foto-fallback.directive';
 import { MascaraDirective } from '../../shared/mascara.directive';
 import { CarrinhoService } from '../../services/carrinho.service';
 import { AuthService } from '../../services/auth.service';
+import { mensagemDeErro } from '../../services/api';
 import { Pedido, PedidoService } from '../../services/pedido.service';
 import { ToastService } from '../../services/toast.service';
 import { PixQrComponent } from '../../shared/pix-qr/pix-qr.component';
@@ -109,7 +110,7 @@ export class CestaComponent implements OnDestroy {
     this.entregaEnviada = false;
   }
 
-  confirmarPedido(): void {
+  async confirmarPedido(): Promise<void> {
     this.entregaEnviada = true;
     const usuario = this.authService.usuarioLogado();
     if (!usuario) {
@@ -124,24 +125,27 @@ export class CestaComponent implements OnDestroy {
     const { cep, endereco, numero, cidade, uf, pagamento, salvarEndereco } = this.formEntrega.value;
     const enderecoPedido = { cep, endereco, numero, cidade, uf: String(uf).toUpperCase() };
 
-    this.pedidoCriado = this.pedidoService.criar({
-      emailUsuario: usuario.email,
-      itens: this.carrinhoService.itensCarrinho().map(i => ({
-        produtoId: i.produto.id,
-        nome: i.produto.nome,
-        foto: i.produto.foto,
-        preco: i.produto.preco,
-        quantidade: i.quantidade
-      })),
-      subtotal: this.carrinhoService.totalCarrinho(),
-      frete: this.carrinhoService.frete(),
-      total: this.carrinhoService.totalComFrete(),
-      endereco: enderecoPedido,
-      pagamento
-    }, this.statusInicial(pagamento));
+    try {
+      this.pedidoCriado = await this.pedidoService.criar({
+        clienteId: usuario.id,
+        itens: this.carrinhoService.itensCarrinho().map(i => ({
+          produtoId: i.produto.id,
+          nome: i.produto.nome,
+          foto: i.produto.foto,
+          preco: i.produto.preco,
+          quantidade: i.quantidade
+        })),
+        frete: this.carrinhoService.frete(),
+        endereco: enderecoPedido,
+        pagamento
+      }, this.statusInicial(pagamento));
+    } catch (erro) {
+      this.toast.mostrar(mensagemDeErro(erro, 'Não foi possível registrar o pedido. Tente novamente.'));
+      return;
+    }
 
     if (salvarEndereco) {
-      this.authService.atualizarPerfil({ endereco: enderecoPedido });
+      await this.authService.atualizarPerfil({ endereco: enderecoPedido });
     }
     this.carrinhoService.limparCesta();
 
@@ -192,7 +196,7 @@ export class CestaComponent implements OnDestroy {
     this.pararRelogio();
     this.pixConfirmado = true;
     if (this.pedidoCriado) {
-      this.pedidoService.atualizarStatus(this.pedidoCriado.id, 'Pagamento confirmado');
+      this.pedidoService.atualizarStatus(this.pedidoCriado.id, 'Pagamento confirmado').catch(() => undefined);
       this.pedidoCriado = { ...this.pedidoCriado, status: 'Pagamento confirmado' };
     }
     this.toast.mostrar('Pagamento confirmado!');

@@ -74,33 +74,37 @@ export class PerfilComponent implements OnInit {
     }
   }
 
-  salvarDados(): void {
+  async salvarDados(): Promise<void> {
     this.dadosEnviado = true;
     if (this.formDados.invalid) {
       return;
     }
     const { nome, nascimento, telefone } = this.formDados.value;
-    const resultado = this.authService.atualizarPerfil({ nome: nome.trim(), nascimento, telefone });
+    const resultado = await this.authService.atualizarPerfil({ nome: nome.trim(), nascimento, telefone });
     if (resultado.ok) {
       this.usuario = this.authService.usuarioLogado()!;
       this.dadosEnviado = false;
       this.toast.mostrar('Dados atualizados com sucesso');
+    } else {
+      this.toast.mostrar(resultado.erro ?? 'Não foi possível salvar os dados');
     }
   }
 
-  salvarEndereco(): void {
+  async salvarEndereco(): Promise<void> {
     this.enderecoEnviado = true;
     if (this.formEndereco.invalid) {
       return;
     }
     const valor = this.formEndereco.value;
-    const resultado = this.authService.atualizarPerfil({
+    const resultado = await this.authService.atualizarPerfil({
       endereco: { ...valor, uf: String(valor.uf).toUpperCase() }
     });
     if (resultado.ok) {
       this.usuario = this.authService.usuarioLogado()!;
       this.enderecoEnviado = false;
       this.toast.mostrar('Endereço salvo com sucesso');
+    } else {
+      this.toast.mostrar(resultado.erro ?? 'Não foi possível salvar o endereço');
     }
   }
 

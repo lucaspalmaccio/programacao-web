@@ -1,0 +1,108 @@
+import { HttpErrorResponse, HttpInterceptorFn, HttpResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { EnvironmentProviders } from '@angular/core';
+import { Observable, of, throwError } from 'rxjs';
+import { API_URL } from '../services/api';
+
+/**
+ * API em memória para os testes: imita as regras do backend (Spring Boot) sem rede.
+ * Cada chamada de provideApiFalsa() cria um "banco" novo, vazio.
+ */
+export function provideApiFalsa(): EnvironmentProviders {
+  const clientes: any[] = [];
+  const pedidos: any[] = [];
+
+  const digitos = (v: string) => (v ?? '').replace(/\D/g, '');
+  const erro = (status: number, mensagem: string) =>
+    throwError(() => new HttpErrorResponse({ status, error: { status, mensagem } }));
+  const ok = (body: unknown, status = 200) => of(new HttpResponse({ status, body }));
+
+  const publico = (c: any) => {
+    const { senha, ...resto } = c;
+    return resto;
+  };
+  const endereco = (e: any) => e && { ...e, cep: digitos(e.cep), uf: String(e.uf).toUpperCase() };
+
+  const interceptor: HttpInterceptorFn = (req, next): Observable<any> => {
+    if (!req.url.startsWith(API_URL)) {
+      return next(req);
+    }
+    const rota = req.url.slice(API_URL.length);
+    const corpo: any = req.body;
+    let m: RegExpMatchArray | null;
+
+    if (req.method === 'POST' && rota === '/clientes') {
+      const email = corpo.email.trim().toLowerCase();
+      const cpf = digitos(corpo.cpf);
+      if (clientes.some(c => c.email === email)) {
+        return erro(409, 'Já existe uma conta com esse e-mail.');
+      }
+      if (clientes.some(c => c.cpf === cpf)) {
+        return erro(409, 'Já existe uma conta com esse CPF.');
+      }
+      const cliente = {
+        id: clientes.length + 1, nome: corpo.nome.trim(), email, cpf, telefone: digitos(corpo.telefone),
+        nascimento: corpo.nascimento, senha: corpo.senha, endereco: endereco(corpo.endereco)
+      };
+      clientes.push(cliente);
+      return ok(publico(cliente), 201);
+    }
+
+    if (req.method === 'POST' && rota === '/clientes/login') {
+      const c = clientes.find(x => x.email === corpo.email.trim().toLowerCase() && x.senha === corpo.senha);
+      return c ? ok(publico(c)) : erro(401, 'E-mail ou senha incorretos.');
+    }
+
+    if (req.method === 'PUT' && (m = rota.match(/^\/clientes\/(\d+)$/))) {
+      const c = clientes.find(x => x.id === +m![1]);
+      if (!c) {
+        return erro(404, 'Cliente não encontrado.');
+      }
+      Object.assign(c, {
+        nome: corpo.nome.trim(), telefone: digitos(corpo.telefone), nascimento: corpo.nascimento,
+        endereco: corpo.endereco ? endereco(corpo.endereco) : c.endereco
+      });
+      return ok(publico(c));
+    }
+
+    if (req.method === 'PUT' && (m = rota.match(/^\/clientes\/(\d+)\/senha$/))) {
+      const c = clientes.find(x => x.id === +m![1]);
+      if (!c) {
+        return erro(404, 'Cliente não encontrado.');
+      }
+      if (c.senha !== corpo.senhaAtual) {
+        return erro(401, 'A senha atual está incorreta.');
+      }
+      c.senha = corpo.novaSenha;
+      return ok(null, 204);
+    }
+
+    if (req.method === 'POST' && rota === '/pedidos') {
+      const subtotal = corpo.itens.reduce((s: number, i: any) => s + i.preco * i.quantidade, 0);
+      const pedido = {
+        id: pedidos.length + 1, clienteId: corpo.clienteId, data: new Date().toISOString(), itens: corpo.itens,
+        subtotal, frete: corpo.frete, total: subtotal + corpo.frete, endereco: endereco(corpo.endereco),
+        pagamento: corpo.pagamento, status: corpo.status || 'Pedido recebido'
+      };
+      pedidos.push(pedido);
+      return ok(pedido, 201);
+    }
+
+    if (req.method === 'GET' && rota === '/pedidos') {
+      const id = req.params.get('clienteId');
+      return ok(pedidos.filter(p => id === null || p.clienteId === +id).reverse());
+    }
+
+    if (req.method === 'PUT' && (m = rota.match(/^\/pedidos\/(\d+)\/status$/))) {
+      const p = pedidos.find(x => x.id === +m![1]);
+      if (!p) {
+        return erro(404, 'Pedido não encontrado.');
+      }
+      p.status = corpo.status;
+      return ok(p);
+    }
+
+    return erro(404, `Rota não simulada: ${req.method} ${rota}`);
+  };
+
+  return provideHttpClient(withInterceptors([interceptor])) as unknown as EnvironmentProviders;
+}

@@ -21,9 +21,13 @@ export class BuscaComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.route.queryParamMap.subscribe(params => {
+    this.route.queryParamMap.subscribe(async params => {
       this.termo = params.get('q') ?? '';
-      this.resultados = this.produtoService.buscarProdutos(this.termo);
+      const termo = this.termo;
+      const resultados = await this.produtoService.buscarProdutos(termo);
+      if (termo === this.termo) {
+        this.resultados = resultados;
+      }
     });
   }
 }

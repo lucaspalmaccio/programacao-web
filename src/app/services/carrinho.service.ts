@@ -44,11 +44,17 @@ export class CarrinhoService {
 
   totalComFrete = computed(() => this.totalCarrinho() + this.frete());
 
+  /** Só grava a cesta depois de restaurá-la, para não apagar a cesta salva antes do catálogo chegar. */
+  private restaurada = false;
+
   constructor(private produtoService: ProdutoService) {
-    this.itens.set(this.restaurar());
     effect(() => {
-      gravarJson(CHAVE, this.itens().map(i => ({ id: i.produto.id, quantidade: i.quantidade })));
+      const itens = this.itens();
+      if (this.restaurada) {
+        gravarJson(CHAVE, itens.map(i => ({ id: i.produto.id, quantidade: i.quantidade })));
+      }
     });
+    this.produtoService.carregar().then(() => this.restaurar());
   }
 
   /** Retorna false quando o limite por produto já foi atingido. */
@@ -92,18 +98,20 @@ export class CarrinhoService {
     this.itens.set([]);
   }
 
-  private restaurar(): ItemCarrinho[] {
-    const salvos = lerJson<ItemSalvo[]>(CHAVE, []);
-    if (!Array.isArray(salvos)) {
-      return [];
+  /** Recupera a cesta salva (o catálogo já está carregado); itens adicionados nesse meio-tempo são mantidos. */
+  private restaurar(): void {
+    if (this.produtoService.getProdutos().length === 0) {
+      return; // catálogo indisponível: mantém a cesta salva intacta
     }
-    const itens: ItemCarrinho[] = [];
-    for (const s of salvos) {
+    const salvos = lerJson<ItemSalvo[]>(CHAVE, []);
+    const itens = [...this.itens()];
+    for (const s of Array.isArray(salvos) ? salvos : []) {
       const produto = this.produtoService.getProdutoPorId(s.id);
-      if (produto && s.quantidade > 0) {
+      if (produto && s.quantidade > 0 && !itens.some(i => i.produto.id === produto.id)) {
         itens.push({ produto, quantidade: Math.min(s.quantidade, this.limitePorProduto) });
       }
     }
-    return itens;
+    this.restaurada = true;
+    this.itens.set(itens);
   }
 }

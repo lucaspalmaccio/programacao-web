@@ -102,9 +102,11 @@ export class AuthService {
     });
   }
 
-  solicitarRecuperacaoSenha(email: string): boolean {
-    // Simulação: por segurança, a resposta é a mesma exista ou não a conta.
-    return !!email;
+  /** A API responde 204 exista ou não a conta, para não revelar quais e-mails estão cadastrados. */
+  async solicitarRecuperacaoSenha(email: string): Promise<Resultado> {
+    return this.executar(async () => {
+      await firstValueFrom(this.http.post<void>(`${this.url}/reenviar-senha`, { email: email.trim().toLowerCase() }));
+    });
   }
 
   private async executar(acao: () => Promise<void>): Promise<Resultado> {

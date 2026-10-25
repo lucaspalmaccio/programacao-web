@@ -28,12 +28,16 @@ export class EsqueciSenhaComponent {
     this.fechar.emit();
   }
 
-  enviar(): void {
+  erro = '';
+
+  async enviar(): Promise<void> {
     this.enviado = true;
     if (this.form.invalid) {
       return;
     }
-    this.sucesso = this.authService.solicitarRecuperacaoSenha(this.form.value.email);
+    const resultado = await this.authService.solicitarRecuperacaoSenha(this.form.value.email);
+    this.sucesso = resultado.ok;
+    this.erro = resultado.erro ?? '';
   }
 
   campoInvalido(campo: string): boolean {

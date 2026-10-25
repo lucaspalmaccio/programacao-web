@@ -2,6 +2,7 @@ import { HttpErrorResponse, HttpInterceptorFn, HttpResponse, provideHttpClient, 
 import { EnvironmentProviders } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { API_URL } from '../services/api';
+import { PRODUTOS_FALSOS } from './produtos-falsos';
 
 /**
  * API em memória para os testes: imita as regras do backend (Spring Boot) sem rede.
@@ -30,6 +31,17 @@ export function provideApiFalsa(): EnvironmentProviders {
     const corpo: any = req.body;
     let m: RegExpMatchArray | null;
 
+    if (req.method === 'GET' && rota === '/produtos') {
+      const termo = (req.params.get('busca') ?? '').toLowerCase();
+      return ok(PRODUTOS_FALSOS.filter(p =>
+        !termo || [p.nome, p.tipo, p.pais, p.regiao, p.uva].some(c => c.toLowerCase().includes(termo))));
+    }
+
+    if (req.method === 'GET' && (m = rota.match(/^\/produtos\/(\d+)$/))) {
+      const p = PRODUTOS_FALSOS.find(x => x.id === +m![1]);
+      return p ? ok(p) : erro(404, `Produto ${m[1]} não encontrado.`);
+    }
+
     if (req.method === 'POST' && rota === '/clientes') {
       const email = corpo.email.trim().toLowerCase();
       const cpf = digitos(corpo.cpf);
@@ -50,6 +62,10 @@ export function provideApiFalsa(): EnvironmentProviders {
     if (req.method === 'POST' && rota === '/clientes/login') {
       const c = clientes.find(x => x.email === corpo.email.trim().toLowerCase() && x.senha === corpo.senha);
       return c ? ok(publico(c)) : erro(401, 'E-mail ou senha incorretos.');
+    }
+
+    if (req.method === 'POST' && rota === '/clientes/reenviar-senha') {
+      return ok(null, 204);
     }
 
     if (req.method === 'PUT' && (m = rota.match(/^\/clientes\/(\d+)$/))) {

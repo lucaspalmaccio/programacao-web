@@ -70,6 +70,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       imports: [AppComponent],
       providers: [provideRouter(routes), provideApiFalsa(), { provide: LOCALE_ID, useValue: 'pt-BR' }]
     });
+    await TestBed.inject(ProdutoService).carregar();
     fixture = TestBed.createComponent(AppComponent);
     router = TestBed.inject(Router);
     fixture.detectChanges();
@@ -343,7 +344,7 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       expect(q('.overlay .invalid-feedback')).not.toBeNull();
       digitar('#emailRecuperacao', 'maria@exemplo.com');
       q('.overlay button[type="submit"]')!.click();
-      fixture.detectChanges();
+      await estabilizar();
       expect(q('.overlay .alert-success')).not.toBeNull();
       textoBotao('Voltar ao login')!.click();
       fixture.detectChanges();

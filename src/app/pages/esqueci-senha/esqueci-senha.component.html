@@ -12,7 +12,7 @@
 
     @if (sucesso) {
       <div class="alert alert-success text-center mb-3">
-        Se o e-mail informado estiver cadastrado, você receberá as instruções de recuperação em instantes.
+        Se o e-mail informado estiver cadastrado, enviamos uma senha temporária para ele. Use-a para entrar e depois altere a senha no seu perfil.
       </div>
       <button type="button" class="btn btn-vinho w-100" (click)="fechar.emit()">Voltar ao login</button>
     } @else {
@@ -31,6 +31,9 @@
         </div>
         @if (campoInvalido('email')) {
           <div class="invalid-feedback d-block">Informe um e-mail válido.</div>
+        }
+        @if (erro) {
+          <div class="alert alert-danger mt-3 mb-0">{{ erro }}</div>
         }
       </form>
     }

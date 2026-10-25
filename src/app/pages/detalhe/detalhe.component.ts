@@ -17,6 +17,7 @@ import { CarrinhoService } from '../../services/carrinho.service';
 export class DetalheComponent implements OnInit {
   produto: Produto | undefined;
   adicionado = false;
+  carregando = true;
 
   constructor(
     private route: ActivatedRoute,
@@ -27,10 +28,15 @@ export class DetalheComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe(params => {
+    this.route.paramMap.subscribe(async params => {
       const id = Number(params.get('id'));
-      this.produto = this.produtoService.getProdutoPorId(id);
+      this.carregando = true;
       this.adicionado = false;
+      const produto = await this.produtoService.buscarPorId(id);
+      if (id === Number(this.route.snapshot.paramMap.get('id'))) {
+        this.produto = produto;
+        this.carregando = false;
+      }
     });
   }
 

@@ -32,13 +32,20 @@ export class VitrineComponent implements OnInit {
     private route: ActivatedRoute
   ) {}
 
-  ngOnInit(): void {
-    this.todos = this.produtoService.getProdutos();
-    this.paises = [...new Set(this.todos.map(p => p.pais))].sort();
+  carregando = true;
+  erro = '';
+
+  async ngOnInit(): Promise<void> {
     this.route.queryParamMap.subscribe(params => {
       this.tipoSelecionado = params.get('tipo');
       this.aplicar();
     });
+    await this.produtoService.carregar();
+    this.todos = this.produtoService.getProdutos();
+    this.paises = [...new Set(this.todos.map(p => p.pais))].sort();
+    this.erro = this.produtoService.erro();
+    this.carregando = false;
+    this.aplicar();
   }
 
   aplicar(): void {

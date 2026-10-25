@@ -25,6 +25,7 @@ Console: http://localhost:8080/h2-console (JDBC URL `jdbc:h2:file:./data/divino`
 | PUT | `/api/clientes/{id}` | 200 / 400 / 404 / 409 |
 | DELETE | `/api/clientes/{id}` | 204 / 404 |
 | POST | `/api/clientes/login` | 200 (cliente) / 400 / 401 |
+| POST | `/api/clientes/reenviar-senha` | 204 sempre (gera senha temporária via native query; envio simulado no log) / 400 |
 | PUT | `/api/clientes/{id}/senha` | 204 / 400 / 401 (senha atual errada) / 404 |
 
 Exemplo de POST:
@@ -58,6 +59,18 @@ Regras:
 | PUT | `/api/pedidos/{id}/status` | 200 / 400 / 404 |
 
 Subtotal e total são calculados no servidor a partir dos itens. Excluir um cliente que tem pedidos devolve 409.
+
+## Endpoints — `/api/produtos`
+
+| Método | Rota | Respostas |
+|---|---|---|
+| GET | `/api/produtos?busca=` | 200 lista (com `busca`, usa native query em nome, tipo, país, região e uva) |
+| GET | `/api/produtos/{id}` | 200 / 404 |
+| POST | `/api/produtos` | 201 + `Location` / 400 |
+| PUT | `/api/produtos/{id}` | 200 / 400 / 404 |
+| DELETE | `/api/produtos/{id}` | 204 / 404 |
+
+O catálogo inicial (13 vinhos) vem de `src/main/resources/produtos-seed.json` e é cadastrado na primeira subida, quando a tabela está vazia.
 
 ## MySQL (opcional)
 

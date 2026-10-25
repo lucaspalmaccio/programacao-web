@@ -5,6 +5,7 @@ import { FavoritosService } from './favoritos.service';
 import { PedidoService } from './pedido.service';
 import { ProdutoService } from './produto.service';
 import { provideApiFalsa } from '../testing/api-falsa';
+import { Produto } from '../models/produto';
 
 const novo = {
   nome: 'Maria Silva',
@@ -20,6 +21,13 @@ function limpar(): void {
   recarregar();
 }
 
+/** Carrega o catálogo (da API falsa) e devolve os produtos. */
+async function catalogo(): Promise<Produto[]> {
+  const produtos = TestBed.inject(ProdutoService);
+  await produtos.carregar();
+  return produtos.getProdutos();
+}
+
 /** Recria o módulo de teste (como recarregar a página) com a API em memória. */
 function recarregar(): void {
   TestBed.resetTestingModule();
@@ -29,25 +37,25 @@ function recarregar(): void {
 describe('ProdutoService', () => {
   beforeEach(limpar);
 
-  it('tem os 13 vinhos do catálogo, com fotos e regiões', () => {
-    const produtos = TestBed.inject(ProdutoService).getProdutos();
+  it('tem os 13 vinhos do catálogo, com fotos e regiões', async () => {
+    const produtos = await catalogo();
     expect(produtos.length).toBe(13);
     expect(produtos.every(p => p.foto.startsWith('vinhos/') && !!p.regiao)).toBeTrue();
     expect(new Set(produtos.map(p => p.id)).size).toBe(13);
   });
 
-  it('cobre os 4 tipos', () => {
-    const tipos = new Set(TestBed.inject(ProdutoService).getProdutos().map(p => p.tipo));
+  it('cobre os 4 tipos', async () => {
+    const tipos = new Set((await catalogo()).map(p => p.tipo));
     expect([...tipos].sort()).toEqual(['Branco', 'Espumante', 'Rosé', 'Tinto']);
   });
 
-  it('busca por nome, país, uva e região sem diferenciar maiúsculas', () => {
+  it('busca por nome, país, uva e região sem diferenciar maiúsculas', async () => {
     const s = TestBed.inject(ProdutoService);
-    expect(s.buscarProdutos('vik').length).toBe(1);
-    expect(s.buscarProdutos('CHILE').length).toBeGreaterThanOrEqual(3);
-    expect(s.buscarProdutos('mendoza').length).toBeGreaterThanOrEqual(1);
-    expect(s.buscarProdutos('inexistente-xyz').length).toBe(0);
-    expect(s.buscarProdutos('').length).toBe(13);
+    expect((await s.buscarProdutos('vik')).length).toBe(1);
+    expect((await s.buscarProdutos('CHILE')).length).toBeGreaterThanOrEqual(3);
+    expect((await s.buscarProdutos('mendoza')).length).toBeGreaterThanOrEqual(1);
+    expect((await s.buscarProdutos('inexistente-xyz')).length).toBe(0);
+    expect((await s.buscarProdutos('')).length).toBe(13);
   });
 });
 
@@ -125,9 +133,9 @@ describe('AuthService', () => {
 describe('CarrinhoService', () => {
   beforeEach(limpar);
 
-  it('soma itens e total', () => {
+  it('soma itens e total', async () => {
     const c = TestBed.inject(CarrinhoService);
-    const [a, b] = TestBed.inject(ProdutoService).getProdutos();
+    const [a, b] = await catalogo();
     c.adicionar(a);
     c.adicionar(a);
     c.adicionar(b);
@@ -135,9 +143,9 @@ describe('CarrinhoService', () => {
     expect(c.totalCarrinho()).toBeCloseTo(a.preco * 2 + b.preco, 2);
   });
 
-  it('respeita o limite de 12 por produto', () => {
+  it('respeita o limite de 12 por produto', async () => {
     const c = TestBed.inject(CarrinhoService);
-    const p = TestBed.inject(ProdutoService).getProdutos()[0];
+    const p = (await catalogo())[0];
     for (let i = 0; i < 12; i++) {
       expect(c.adicionar(p)).toBeTrue();
     }
@@ -146,9 +154,9 @@ describe('CarrinhoService', () => {
     expect(c.totalItens()).toBe(12);
   });
 
-  it('remove o item ao chegar em zero e limpa a cesta', () => {
+  it('remove o item ao chegar em zero e limpa a cesta', async () => {
     const c = TestBed.inject(CarrinhoService);
-    const p = TestBed.inject(ProdutoService).getProdutos()[0];
+    const p = (await catalogo())[0];
     c.adicionar(p);
     c.atualizarQuantidade(p.id, 0);
     expect(c.itensCarrinho().length).toBe(0);
@@ -157,9 +165,9 @@ describe('CarrinhoService', () => {
     expect(c.totalItens()).toBe(0);
   });
 
-  it('cobra frete abaixo de R$ 299 e dá frete grátis acima', () => {
+  it('cobra frete abaixo de R$ 299 e dá frete grátis acima', async () => {
     const c = TestBed.inject(CarrinhoService);
-    const produtos = TestBed.inject(ProdutoService).getProdutos();
+    const produtos = await catalogo();
     const barato = [...produtos].sort((x, y) => x.preco - y.preco)[0];
     expect(c.frete()).toBe(0); // cesta vazia
     c.adicionar(barato);
@@ -171,21 +179,24 @@ describe('CarrinhoService', () => {
     expect(c.frete()).toBe(0);
   });
 
-  it('guarda a cesta ao recarregar', () => {
+  it('guarda a cesta ao recarregar', async () => {
     const c = TestBed.inject(CarrinhoService);
-    const p = TestBed.inject(ProdutoService).getProdutos()[3];
+    const p = (await catalogo())[3];
     c.adicionar(p);
     c.adicionar(p);
     TestBed.flushEffects();
-    TestBed.resetTestingModule();
+    recarregar();
     const nova = TestBed.inject(CarrinhoService);
+    await catalogo();
     expect(nova.totalItens()).toBe(2);
     expect(nova.itensCarrinho()[0].produto.id).toBe(p.id);
   });
 
-  it('ignora produtos que não existem mais no catálogo', () => {
+  it('ignora produtos que não existem mais no catálogo', async () => {
     localStorage.setItem('vinho-carrinho', JSON.stringify([{ id: 9999, quantidade: 2 }]));
-    expect(TestBed.inject(CarrinhoService).totalItens()).toBe(0);
+    const c = TestBed.inject(CarrinhoService);
+    await catalogo();
+    expect(c.totalItens()).toBe(0);
   });
 });
 
@@ -236,5 +247,16 @@ describe('FavoritosService', () => {
   it('tolera dado corrompido no armazenamento', () => {
     localStorage.setItem('vinho-favoritos', '{isso nao e json');
     expect(TestBed.inject(FavoritosService).ids()).toEqual([]);
+  });
+});
+
+describe('ProdutoService (detalhe)', () => {
+  beforeEach(limpar);
+
+  it('busca um vinho pelo id e devolve undefined quando não existe', async () => {
+    const s = TestBed.inject(ProdutoService);
+    const [primeiro] = await catalogo();
+    expect((await s.buscarPorId(primeiro.id))?.nome).toBe(primeiro.nome);
+    expect(await s.buscarPorId(99999)).toBeUndefined();
   });
 });

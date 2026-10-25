@@ -241,4 +241,19 @@ class ClienteControllerTest {
         enviar(post("/api/clientes/login"), Map.of("email", "maria@teste.com", "senha", "nova12345"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void reenviarSenhaInvalidaASenhaAntigaEResponde204MesmoParaEmailDesconhecido() throws Exception {
+        criar(cliente("maria@teste.com", CPF_A));
+
+        enviar(post("/api/clientes/reenviar-senha"), Map.of("email", " MARIA@teste.com "))
+                .andExpect(status().isNoContent());
+        enviar(post("/api/clientes/login"), Map.of("email", "maria@teste.com", "senha", "segredo123"))
+                .andExpect(status().isUnauthorized());
+
+        enviar(post("/api/clientes/reenviar-senha"), Map.of("email", "ninguem@teste.com"))
+                .andExpect(status().isNoContent());
+        enviar(post("/api/clientes/reenviar-senha"), Map.of("email", ""))
+                .andExpect(status().isBadRequest());
+    }
 }

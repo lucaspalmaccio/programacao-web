@@ -2,6 +2,7 @@ package br.com.divino.loja.controller;
 
 import br.com.divino.loja.dto.AlterarSenhaRequest;
 import br.com.divino.loja.dto.LoginRequest;
+import br.com.divino.loja.dto.ReenvioSenhaRequest;
 import br.com.divino.loja.dto.ClienteCreateRequest;
 import br.com.divino.loja.dto.ClienteResponse;
 import br.com.divino.loja.dto.ClienteUpdateRequest;
@@ -65,6 +66,13 @@ public class ClienteController {
     @PostMapping("/login")
     public ClienteResponse login(@Valid @RequestBody LoginRequest dto) {
         return service.login(dto);
+    }
+
+    /** POST /api/clientes/reenviar-senha — envia senha temporária ao e-mail. Sempre 204. */
+    @PostMapping("/reenviar-senha")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reenviarSenha(@Valid @RequestBody ReenvioSenhaRequest dto) {
+        service.reenviarSenha(dto);
     }
 
     /** PUT /api/clientes/{id}/senha — troca a senha exigindo a atual. 204 No Content. */

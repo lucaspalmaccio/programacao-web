@@ -38,7 +38,7 @@ public class PedidoService {
     public List<PedidoResponse> listar(Long clienteId) {
         List<Pedido> lista = (clienteId == null)
                 ? pedidos.findAllByOrderByIdDesc()
-                : pedidos.findByClienteIdOrderByIdDesc(clienteId);
+                : pedidos.listarPorCliente(clienteId);
         return lista.stream().map(PedidoResponse::de).toList();
     }
 

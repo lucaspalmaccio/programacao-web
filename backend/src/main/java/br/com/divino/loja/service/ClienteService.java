@@ -2,6 +2,7 @@ package br.com.divino.loja.service;
 
 import br.com.divino.loja.dto.AlterarSenhaRequest;
 import br.com.divino.loja.dto.LoginRequest;
+import br.com.divino.loja.dto.ReenvioSenhaRequest;
 import br.com.divino.loja.exception.CredenciaisInvalidasException;
 import br.com.divino.loja.dto.ClienteCreateRequest;
 import br.com.divino.loja.dto.ClienteResponse;
@@ -13,10 +14,13 @@ import br.com.divino.loja.exception.ConflitoException;
 import br.com.divino.loja.exception.RecursoNaoEncontradoException;
 import br.com.divino.loja.repository.ClienteRepository;
 import br.com.divino.loja.repository.PedidoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
@@ -24,6 +28,10 @@ import java.util.Locale;
 @Service
 @Transactional
 public class ClienteService {
+
+    private static final Logger log = LoggerFactory.getLogger(ClienteService.class);
+    private static final String ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final ClienteRepository repository;
     private final PedidoRepository pedidos;
@@ -112,7 +120,7 @@ public class ClienteService {
 
     @Transactional(readOnly = true)
     public ClienteResponse login(LoginRequest dto) {
-        Cliente cliente = repository.findByEmail(normalizarEmail(dto.email()))
+        Cliente cliente = repository.buscarPorEmailNativo(normalizarEmail(dto.email()))
                 .filter(c -> passwordEncoder.matches(dto.senha(), c.getSenhaHash()))
                 .orElseThrow(() -> new CredenciaisInvalidasException("E-mail ou senha incorretos."));
         return ClienteResponse.de(cliente);
@@ -125,6 +133,23 @@ public class ClienteService {
         }
         cliente.setSenhaHash(passwordEncoder.encode(dto.novaSenha()));
         repository.save(cliente);
+    }
+
+    /**
+     * Senhas ficam em hash BCrypt, então não dá para "reenviar" a original: gera-se uma senha
+     * temporária, grava o hash via native query e a envia ao e-mail. Sem servidor de e-mail
+     * configurado, o envio é simulado no log. E-mail desconhecido é ignorado em silêncio
+     * para não revelar quais e-mails têm conta.
+     */
+    public void reenviarSenha(ReenvioSenhaRequest dto) {
+        repository.buscarPorEmailNativo(normalizarEmail(dto.email())).ifPresent(cliente -> {
+            StringBuilder temporaria = new StringBuilder();
+            for (int i = 0; i < 10; i++) {
+                temporaria.append(ALFABETO.charAt(RANDOM.nextInt(ALFABETO.length())));
+            }
+            repository.atualizarSenhaHash(cliente.getId(), passwordEncoder.encode(temporaria));
+            log.info("[e-mail simulado] Para {}: sua nova senha temporária é {}", cliente.getEmail(), temporaria);
+        });
     }
 
     private static String normalizarEmail(String email) {

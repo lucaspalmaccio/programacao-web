@@ -6,6 +6,7 @@ import br.com.divino.loja.dto.ReenvioSenhaRequest;
 import br.com.divino.loja.dto.ClienteCreateRequest;
 import br.com.divino.loja.dto.ClienteResponse;
 import br.com.divino.loja.dto.ClienteUpdateRequest;
+import br.com.divino.loja.security.Autorizacao;
 import br.com.divino.loja.service.ClienteService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -30,20 +31,24 @@ import java.util.List;
 public class ClienteController {
 
     private final ClienteService service;
+    private final Autorizacao autorizacao;
 
-    public ClienteController(ClienteService service) {
+    public ClienteController(ClienteService service, Autorizacao autorizacao) {
         this.service = service;
+        this.autorizacao = autorizacao;
     }
 
-    /** GET /api/clientes?nome=ana — lista todos ou filtra pelo nome. */
+    /** GET /api/clientes?nome=ana — lista todos ou filtra pelo nome. Só administrador. */
     @GetMapping
     public List<ClienteResponse> listar(@RequestParam(required = false) String nome) {
+        autorizacao.exigirAdmin();
         return service.listar(nome);
     }
 
-    /** GET /api/clientes/{id} */
+    /** GET /api/clientes/{id} — o próprio cliente ou administrador. */
     @GetMapping("/{id}")
     public ClienteResponse buscar(@PathVariable Long id) {
+        autorizacao.exigirDono(id);
         return service.buscar(id);
     }
 
@@ -59,6 +64,7 @@ public class ClienteController {
     /** PUT /api/clientes/{id} — substitui os dados cadastrais. */
     @PutMapping("/{id}")
     public ClienteResponse atualizar(@PathVariable Long id, @Valid @RequestBody ClienteUpdateRequest dto) {
+        autorizacao.exigirDono(id);
         return service.atualizar(id, dto);
     }
 
@@ -79,6 +85,7 @@ public class ClienteController {
     @PutMapping("/{id}/senha")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void alterarSenha(@PathVariable Long id, @Valid @RequestBody AlterarSenhaRequest dto) {
+        autorizacao.exigirDono(id);
         service.alterarSenha(id, dto);
     }
 
@@ -86,6 +93,7 @@ public class ClienteController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void excluir(@PathVariable Long id) {
+        autorizacao.exigirDono(id);
         service.excluir(id);
     }
 }

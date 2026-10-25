@@ -1,5 +1,7 @@
 package br.com.divino.loja;
 
+import br.com.divino.loja.repository.ClienteRepository;
+import br.com.divino.loja.security.TokenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +10,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
@@ -32,6 +36,15 @@ class PedidoControllerTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
 
+    @Autowired TokenService tokens;
+    @Autowired ClienteRepository clientesRepo;
+
+    /** Os testes de CRUD agem como administrador; o acesso por dono é testado em SegurancaClientesTest. */
+    private ResultActions executar(MockHttpServletRequestBuilder req) throws Exception {
+        long id = clientesRepo.buscarPorEmailNativo("admin@divino.com").orElseThrow().getId();
+        return mvc.perform(req.header("Authorization", "Bearer " + tokens.emitir(id)));
+    }
+
     private long criarCliente() throws Exception {
         Map<String, Object> c = new HashMap<>();
         c.put("nome", "Maria Silva");
@@ -40,7 +53,7 @@ class PedidoControllerTest {
         c.put("telefone", "(11) 91234-5678");
         c.put("nascimento", "1990-05-20");
         c.put("senha", "segredo123");
-        String corpo = mvc.perform(post("/api/clientes").contentType(MediaType.APPLICATION_JSON)
+        String corpo = executar(post("/api/clientes").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(c)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return json.readTree(corpo).get("id").asLong();
@@ -59,7 +72,7 @@ class PedidoControllerTest {
     }
 
     private long criarPedido(long clienteId) throws Exception {
-        String corpo = mvc.perform(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
+        String corpo = executar(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(pedido(clienteId))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.subtotal", is(99.8)))
@@ -76,11 +89,11 @@ class PedidoControllerTest {
         long cliente = criarCliente();
         long id = criarPedido(cliente);
 
-        mvc.perform(get("/api/pedidos/{id}", id))
+        executar(get("/api/pedidos/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.itens", hasSize(1)))
                 .andExpect(jsonPath("$.itens[0].quantidade", is(2)));
-        mvc.perform(get("/api/pedidos").param("clienteId", String.valueOf(cliente)))
+        executar(get("/api/pedidos").param("clienteId", String.valueOf(cliente)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
     }
@@ -88,7 +101,7 @@ class PedidoControllerTest {
     @Test
     void atualizaStatus() throws Exception {
         long id = criarPedido(criarCliente());
-        mvc.perform(put("/api/pedidos/{id}/status", id).contentType(MediaType.APPLICATION_JSON)
+        executar(put("/api/pedidos/{id}/status", id).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"Pagamento confirmado\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("Pagamento confirmado")));
@@ -96,13 +109,13 @@ class PedidoControllerTest {
 
     @Test
     void rejeitaClienteInexistenteEPedidoSemItens() throws Exception {
-        mvc.perform(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
+        executar(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(pedido(9999))))
                 .andExpect(status().isNotFound());
 
         Map<String, Object> vazio = pedido(criarCliente());
         vazio.put("itens", List.of());
-        mvc.perform(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
+        executar(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(vazio)))
                 .andExpect(status().isBadRequest());
     }
@@ -111,7 +124,7 @@ class PedidoControllerTest {
     void naoExcluiClienteComPedidos() throws Exception {
         long cliente = criarCliente();
         criarPedido(cliente);
-        mvc.perform(delete("/api/clientes/{id}", cliente)).andExpect(status().isConflict());
+        executar(delete("/api/clientes/{id}", cliente)).andExpect(status().isConflict());
     }
 
     @Test
@@ -119,7 +132,7 @@ class PedidoControllerTest {
         long cliente = criarCliente();
         Map<String, Object> p = pedido(cliente);
         p.put("itens", List.of(Map.of("produtoId", 99999, "nome", "X", "preco", 10.00, "quantidade", 1)));
-        mvc.perform(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
+        executar(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(p)))
                 .andExpect(status().isNotFound());
     }

@@ -1,6 +1,6 @@
 package br.com.divino.loja.config;
 
-import br.com.divino.loja.security.AdminInterceptor;
+import br.com.divino.loja.security.AutenticacaoInterceptor;
 import br.com.divino.loja.service.UploadService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,18 +14,18 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    private final AdminInterceptor adminInterceptor;
+    private final AutenticacaoInterceptor autenticacao;
     private final UploadService uploads;
 
-    public WebConfig(AdminInterceptor adminInterceptor, UploadService uploads) {
-        this.adminInterceptor = adminInterceptor;
+    public WebConfig(AutenticacaoInterceptor autenticacao, UploadService uploads) {
+        this.autenticacao = autenticacao;
         this.uploads = uploads;
     }
 
-    /** Escrita no catálogo e upload de fotos só para administradores. */
+    /** Toda a API exige token, exceto as rotas públicas (ver AutenticacaoInterceptor). */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(adminInterceptor).addPathPatterns("/api/produtos/**", "/api/uploads/**");
+        registry.addInterceptor(autenticacao).addPathPatterns("/api/**");
     }
 
     /** Serve as fotos enviadas em /uploads/vinhos/{arquivo}. */

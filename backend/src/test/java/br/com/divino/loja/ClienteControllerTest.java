@@ -1,5 +1,7 @@
 package br.com.divino.loja;
 
+import br.com.divino.loja.repository.ClienteRepository;
+import br.com.divino.loja.security.TokenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -38,6 +41,15 @@ class ClienteControllerTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
 
+    @Autowired TokenService tokens;
+    @Autowired ClienteRepository clientesRepo;
+
+    /** Os testes de CRUD agem como administrador; o acesso por dono é testado em SegurancaClientesTest. */
+    private ResultActions executar(MockHttpServletRequestBuilder req) throws Exception {
+        long id = clientesRepo.buscarPorEmailNativo("admin@divino.com").orElseThrow().getId();
+        return mvc.perform(req.header("Authorization", "Bearer " + tokens.emitir(id)));
+    }
+
     private Map<String, Object> cliente(String email, String cpf) {
         Map<String, Object> m = new HashMap<>();
         m.put("nome", "Maria Silva");
@@ -56,7 +68,7 @@ class ClienteControllerTest {
 
     private ResultActions enviar(org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder req,
                                  Object corpo) throws Exception {
-        return mvc.perform(req.contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(corpo)));
+        return executar(req.contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(corpo)));
     }
 
     private long criar(Map<String, Object> dados) throws Exception {
@@ -85,10 +97,10 @@ class ClienteControllerTest {
                 .andReturn().getResponse().getContentAsString();
         long id = json.readTree(resposta).get("id").asLong();
 
-        mvc.perform(get("/api/clientes/" + id)).andExpect(status().isOk())
+        executar(get("/api/clientes/" + id)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.email", is("maria@teste.com")));
-        mvc.perform(get("/api/clientes").param("nome", "MARIA")).andExpect(jsonPath("$", hasSize(1)));
-        mvc.perform(get("/api/clientes").param("nome", "zzz")).andExpect(jsonPath("$", hasSize(0)));
+        executar(get("/api/clientes").param("nome", "MARIA")).andExpect(jsonPath("$", hasSize(1)));
+        executar(get("/api/clientes").param("nome", "zzz")).andExpect(jsonPath("$", hasSize(0)));
 
         Map<String, Object> alterado = cliente("maria@teste.com", CPF_A);
         alterado.put("nome", "Maria Souza");
@@ -99,9 +111,9 @@ class ClienteControllerTest {
                 // PUT sem endereço não apaga o que já estava gravado
                 .andExpect(jsonPath("$.endereco.cidade", is("São Paulo")));
 
-        mvc.perform(delete("/api/clientes/" + id)).andExpect(status().isNoContent());
-        mvc.perform(get("/api/clientes/" + id)).andExpect(status().isNotFound());
-        mvc.perform(delete("/api/clientes/" + id)).andExpect(status().isNotFound());
+        executar(delete("/api/clientes/" + id)).andExpect(status().isNoContent());
+        executar(get("/api/clientes/" + id)).andExpect(status().isNotFound());
+        executar(delete("/api/clientes/" + id)).andExpect(status().isNotFound());
     }
 
     @Test
@@ -149,7 +161,7 @@ class ClienteControllerTest {
 
     @Test
     void getComIdNaoNumericoRetorna400() throws Exception {
-        mvc.perform(get("/api/clientes/abc")).andExpect(status().isBadRequest());
+        executar(get("/api/clientes/abc")).andExpect(status().isBadRequest());
     }
 
     // ---------- validação ----------
@@ -171,7 +183,7 @@ class ClienteControllerTest {
         dados.put("email", "nao-e-email");
         dados.put("senha", "curta");
         dados.put("telefone", "123");
-        mvc.perform(post("/api/clientes").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(dados)))
+        executar(post("/api/clientes").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(dados)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.campos.nome").exists())
                 .andExpect(jsonPath("$.campos.email").exists())
@@ -193,7 +205,7 @@ class ClienteControllerTest {
 
     @Test
     void rejeitaJsonMalformado() throws Exception {
-        mvc.perform(post("/api/clientes").contentType(MediaType.APPLICATION_JSON).content("{nao e json"))
+        executar(post("/api/clientes").contentType(MediaType.APPLICATION_JSON).content("{nao e json"))
                 .andExpect(status().isBadRequest());
     }
 

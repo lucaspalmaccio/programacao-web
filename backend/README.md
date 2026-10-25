@@ -15,6 +15,16 @@ cd backend
 Banco H2 em arquivo (`backend/data/`, ignorado pelo git): os dados sobrevivem ao reiniciar.
 Console: http://localhost:8080/h2-console (JDBC URL `jdbc:h2:file:./data/divino`, usuário `sa`, senha vazia).
 
+## Autenticação e acesso
+
+Toda a API exige `Authorization: Bearer <token>`, exceto: cadastro (`POST /api/clientes`), login, reenvio de senha e leitura do catálogo (`GET /api/produtos`). Sem token ou com token inválido/expirado → 401.
+
+| Recurso | Quem pode |
+|---|---|
+| Listar clientes (`GET /api/clientes`) e todos os pedidos (`GET /api/pedidos` sem `clienteId`) | só administrador |
+| Dados, perfil, senha e exclusão de um cliente; pedidos e criação de pedido de um cliente | o próprio cliente ou administrador (outro cliente → 403) |
+| Escrita no catálogo e upload de fotos | só administrador |
+
 ## Endpoints — `/api/clientes`
 
 | Método | Rota | Respostas |

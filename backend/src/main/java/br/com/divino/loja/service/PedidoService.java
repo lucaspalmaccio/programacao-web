@@ -9,9 +9,11 @@ import br.com.divino.loja.entity.Cliente;
 import br.com.divino.loja.entity.Endereco;
 import br.com.divino.loja.entity.ItemPedido;
 import br.com.divino.loja.entity.Pedido;
+import br.com.divino.loja.entity.Produto;
 import br.com.divino.loja.exception.RecursoNaoEncontradoException;
 import br.com.divino.loja.repository.ClienteRepository;
 import br.com.divino.loja.repository.PedidoRepository;
+import br.com.divino.loja.repository.ProdutoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,10 +30,12 @@ public class PedidoService {
 
     private final PedidoRepository pedidos;
     private final ClienteRepository clientes;
+    private final ProdutoRepository produtos;
 
-    public PedidoService(PedidoRepository pedidos, ClienteRepository clientes) {
+    public PedidoService(PedidoRepository pedidos, ClienteRepository clientes, ProdutoRepository produtos) {
         this.pedidos = pedidos;
         this.clientes = clientes;
+        this.produtos = produtos;
     }
 
     @Transactional(readOnly = true)
@@ -56,11 +60,14 @@ public class PedidoService {
 
         BigDecimal subtotal = BigDecimal.ZERO;
         for (ItemPedidoRequest i : dto.itens()) {
+            // nome, foto e preço vêm do catálogo: o que o cliente envia não é confiável
+            Produto produto = produtos.findById(i.produtoId())
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Produto " + i.produtoId() + " não encontrado."));
             ItemPedido item = new ItemPedido();
-            item.setProdutoId(i.produtoId());
-            item.setNome(i.nome().trim());
-            item.setFoto(i.foto());
-            item.setPreco(i.preco().setScale(2, RoundingMode.HALF_UP));
+            item.setProdutoId(produto.getId());
+            item.setNome(produto.getNome());
+            item.setFoto(produto.getFoto());
+            item.setPreco(produto.getPreco().setScale(2, RoundingMode.HALF_UP));
             item.setQuantidade(i.quantidade());
             pedido.adicionarItem(item);
             subtotal = subtotal.add(item.getTotal());

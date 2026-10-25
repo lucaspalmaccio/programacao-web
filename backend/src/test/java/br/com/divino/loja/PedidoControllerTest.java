@@ -47,7 +47,7 @@ class PedidoControllerTest {
     }
 
     private Map<String, Object> pedido(long clienteId) {
-        Map<String, Object> item = Map.of("produtoId", 3, "nome", "Casal Garcia", "preco", 59.90, "quantidade", 2);
+        Map<String, Object> item = Map.of("produtoId", 2, "nome", "Qualquer", "preco", 1.00, "quantidade", 2);
         Map<String, Object> p = new HashMap<>();
         p.put("clienteId", clienteId);
         p.put("itens", List.of(item));
@@ -62,8 +62,9 @@ class PedidoControllerTest {
         String corpo = mvc.perform(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(pedido(clienteId))))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.subtotal", is(119.8)))
-                .andExpect(jsonPath("$.total", is(144.7)))
+                .andExpect(jsonPath("$.subtotal", is(99.8)))
+                .andExpect(jsonPath("$.total", is(124.7)))
+                .andExpect(jsonPath("$.itens[0].nome", is("Casal Garcia Sweet Branco")))
                 .andExpect(jsonPath("$.status", is("Pedido recebido")))
                 .andExpect(jsonPath("$.endereco.uf", is("SP")))
                 .andReturn().getResponse().getContentAsString();
@@ -111,5 +112,15 @@ class PedidoControllerTest {
         long cliente = criarCliente();
         criarPedido(cliente);
         mvc.perform(delete("/api/clientes/{id}", cliente)).andExpect(status().isConflict());
+    }
+
+    @Test
+    void produtoInexistenteNoPedidoDevolve404() throws Exception {
+        long cliente = criarCliente();
+        Map<String, Object> p = pedido(cliente);
+        p.put("itens", List.of(Map.of("produtoId", 99999, "nome", "X", "preco", 10.00, "quantidade", 1)));
+        mvc.perform(post("/api/pedidos").contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(p)))
+                .andExpect(status().isNotFound());
     }
 }

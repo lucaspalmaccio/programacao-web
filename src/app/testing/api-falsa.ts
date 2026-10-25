@@ -11,6 +11,7 @@ import { PRODUTOS_FALSOS } from './produtos-falsos';
 export function provideApiFalsa(): EnvironmentProviders {
   const clientes: any[] = [];
   const pedidos: any[] = [];
+  const produtos: any[] = PRODUTOS_FALSOS.map(p => ({ ...p }));
 
   const digitos = (v: string) => (v ?? '').replace(/\D/g, '');
   const erro = (status: number, mensagem: string) =>
@@ -33,13 +34,40 @@ export function provideApiFalsa(): EnvironmentProviders {
 
     if (req.method === 'GET' && rota === '/produtos') {
       const termo = (req.params.get('busca') ?? '').toLowerCase();
-      return ok(PRODUTOS_FALSOS.filter(p =>
+      return ok(produtos.filter(p =>
         !termo || [p.nome, p.tipo, p.pais, p.regiao, p.uva].some(c => c.toLowerCase().includes(termo))));
     }
 
     if (req.method === 'GET' && (m = rota.match(/^\/produtos\/(\d+)$/))) {
-      const p = PRODUTOS_FALSOS.find(x => x.id === +m![1]);
+      const p = produtos.find(x => x.id === +m![1]);
       return p ? ok(p) : erro(404, `Produto ${m[1]} não encontrado.`);
+    }
+
+    if (req.method === 'POST' && rota === '/produtos') {
+      if (!corpo.nome || corpo.preco <= 0) {
+        return erro(400, 'Dados do produto inválidos.');
+      }
+      const criado = { ...corpo, id: Math.max(0, ...produtos.map(p => p.id)) + 1 };
+      produtos.push(criado);
+      return ok(criado, 201);
+    }
+
+    if (req.method === 'PUT' && (m = rota.match(/^\/produtos\/(\d+)$/))) {
+      const p = produtos.find(x => x.id === +m![1]);
+      if (!p) {
+        return erro(404, `Produto ${m[1]} não encontrado.`);
+      }
+      Object.assign(p, corpo);
+      return ok(p);
+    }
+
+    if (req.method === 'DELETE' && (m = rota.match(/^\/produtos\/(\d+)$/))) {
+      const i = produtos.findIndex(x => x.id === +m![1]);
+      if (i < 0) {
+        return erro(404, `Produto ${m[1]} não encontrado.`);
+      }
+      produtos.splice(i, 1);
+      return ok(null, 204);
     }
 
     if (req.method === 'POST' && rota === '/clientes') {

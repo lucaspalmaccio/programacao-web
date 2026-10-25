@@ -4,6 +4,13 @@ import { firstValueFrom } from 'rxjs';
 import { Produto } from '../models/produto';
 import { API_URL, mensagemDeErro } from './api';
 
+export type NovoProduto = Omit<Produto, 'id'>;
+
+export interface Resultado {
+  ok: boolean;
+  erro?: string;
+}
+
 /**
  * Catálogo vindo da API (backend/). A lista completa é carregada uma vez e fica em memória
  * (`produtos`); a busca e o detalhe consultam a API de novo.
@@ -43,6 +50,37 @@ export class ProdutoService {
 
   getProdutoPorId(id: number): Produto | undefined {
     return this.produtos().find(p => p.id === id);
+  }
+
+  /** Dados editáveis de um vinho (tudo menos o id). */
+  async criar(dados: NovoProduto): Promise<Resultado> {
+    return this.gravar(async () => {
+      const criado = await firstValueFrom(this.http.post<Produto>(this.url, dados));
+      this.produtos.update(lista => [...lista, criado]);
+    });
+  }
+
+  async atualizar(id: number, dados: NovoProduto): Promise<Resultado> {
+    return this.gravar(async () => {
+      const novo = await firstValueFrom(this.http.put<Produto>(`${this.url}/${id}`, dados));
+      this.produtos.update(lista => lista.map(p => p.id === id ? novo : p));
+    });
+  }
+
+  async excluir(id: number): Promise<Resultado> {
+    return this.gravar(async () => {
+      await firstValueFrom(this.http.delete<void>(`${this.url}/${id}`));
+      this.produtos.update(lista => lista.filter(p => p.id !== id));
+    });
+  }
+
+  private async gravar(acao: () => Promise<void>): Promise<Resultado> {
+    try {
+      await acao();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, erro: mensagemDeErro(e) };
+    }
   }
 
   /** Busca no servidor (native query); devolve [] se a API estiver fora do ar. */

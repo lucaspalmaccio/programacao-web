@@ -626,12 +626,12 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       expect(router.url).toBe('/');
     });
 
-    it('menu do usuário no header traz Perfil, Pedidos e Sair', async () => {
+    it('menu do usuário no header traz Perfil, Pedidos, Gerenciar vinhos e Sair', async () => {
       await ir('/');
       q<HTMLButtonElement>('header .usuario-link')!.click();
       fixture.detectChanges();
       const itens = qa('.menu-usuario [role="menuitem"]').map(i => i.textContent!.trim());
-      expect(itens).toEqual(['Meu perfil', 'Meus pedidos', 'Sair']);
+      expect(itens).toEqual(['Meu perfil', 'Meus pedidos', 'Gerenciar vinhos', 'Sair']);
     });
 
     it('Meus pedidos: vazio e com histórico', async () => {
@@ -662,6 +662,73 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       expect(svg.getAttribute('aria-label')).toBe('Di Vino');
       expect(svg.querySelector('text')!.textContent).toBe('Di Vino');
       expect(svg.querySelectorAll('ellipse').length).toBe(2);
+    });
+  });
+
+  // ---------- Gerenciar vinhos ----------
+  describe('Gerenciar vinhos', () => {
+    const catalogo = () => TestBed.inject(ProdutoService).getProdutos();
+
+    async function preencherEEnviar(nome: string, preco: string): Promise<void> {
+      digitar('#vNome', nome);
+      digitar('#vPais', 'Brasil');
+      digitar('#vRegiao', 'Serra Gaúcha');
+      digitar('#vUva', 'Merlot');
+      digitar('#vPreco', preco);
+      textoBotao('Cadastrar vinho')?.click();
+      textoBotao('Salvar alterações')?.click();
+      await estabilizar(100);
+    }
+
+    it('exige login', async () => {
+      await ir('/admin/vinhos');
+      expect(router.url).toContain('/login');
+    });
+
+    describe('logado', () => {
+      beforeEach(async () => {
+        await TestBed.inject(AuthService).cadastrar(usuario);
+        await ir('/admin/vinhos');
+      });
+
+      it('lista o catálogo e valida o formulário vazio', async () => {
+        expect(qa('tbody tr').length).toBe(catalogo().length);
+        textoBotao('Cadastrar vinho')!.click();
+        fixture.detectChanges();
+        expect(qa('.invalid-feedback').length).toBeGreaterThan(0);
+        expect(catalogo().length).toBe(13);
+      });
+
+      it('cadastra um vinho novo e ele aparece na lista', async () => {
+        await preencherEEnviar('Vinho Novo da Serra', '79,90'.replace(',', '.'));
+        expect(catalogo().length).toBe(14);
+        expect(q('tbody')!.textContent).toContain('Vinho Novo da Serra');
+      });
+
+      it('edita um vinho existente', async () => {
+        const alvo = catalogo()[0];
+        textoBotao(`Editar`)!.click();
+        fixture.detectChanges();
+        expect(q<HTMLInputElement>('#vNome')!.value).toBe(alvo.nome);
+        digitar('#vPreco', '123.45');
+        textoBotao('Salvar alterações')!.click();
+        await estabilizar(100);
+        expect(catalogo()[0].preco).toBe(123.45);
+        expect(catalogo().length).toBe(13);
+      });
+
+      it('exclui só depois de confirmar', async () => {
+        qa<HTMLButtonElement>('tbody button').find(b => b.textContent!.includes('Excluir'))!.click();
+        fixture.detectChanges();
+        textoBotao('Não')!.click();
+        fixture.detectChanges();
+        expect(catalogo().length).toBe(13);
+        qa<HTMLButtonElement>('tbody button').find(b => b.textContent!.includes('Excluir'))!.click();
+        fixture.detectChanges();
+        textoBotao('Sim')!.click();
+        await estabilizar(100);
+        expect(catalogo().length).toBe(12);
+      });
     });
   });
 });

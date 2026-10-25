@@ -44,6 +44,10 @@ public class Cliente {
     @Embedded
     private Endereco endereco;
 
+    /** Perfil de administrador: pode gerenciar o catálogo. Só é concedido pelo banco/carga inicial. */
+    @Column(columnDefinition = "boolean default false not null")
+    private boolean admin;
+
     @Column(name = "data_cadastro", nullable = false, updatable = false)
     private LocalDateTime dataCadastro;
 
@@ -72,6 +76,9 @@ public class Cliente {
 
     public String getSenhaHash() { return senhaHash; }
     public void setSenhaHash(String senhaHash) { this.senhaHash = senhaHash; }
+
+    public boolean isAdmin() { return admin; }
+    public void setAdmin(boolean admin) { this.admin = admin; }
 
     public Endereco getEndereco() { return endereco; }
     public void setEndereco(Endereco endereco) { this.endereco = endereco; }

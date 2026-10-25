@@ -8,6 +8,12 @@ import { PRODUTOS_FALSOS } from './produtos-falsos';
  * API em memória para os testes: imita as regras do backend (Spring Boot) sem rede.
  * Cada chamada de provideApiFalsa() cria um "banco" novo, vazio.
  */
+/** Conta de administrador que o backend cria na carga inicial. */
+export const ADMIN_FALSO = {
+  id: 999, nome: 'Administrador Di Vino', email: 'admin@divino.com', cpf: '11144477735',
+  telefone: '11999999999', nascimento: '1990-01-01', admin: true
+};
+
 export function provideApiFalsa(): EnvironmentProviders {
   const clientes: any[] = [];
   const pedidos: any[] = [];
@@ -85,6 +91,17 @@ export function provideApiFalsa(): EnvironmentProviders {
       };
       clientes.push(cliente);
       return ok(publico(cliente), 201);
+    }
+
+    if (req.method === 'POST' && rota === '/uploads/vinhos') {
+      const arquivo = (corpo as FormData).get('arquivo') as File | null;
+      return arquivo ? ok({ url: `http://localhost:8080/uploads/vinhos/${arquivo.name}` }, 201)
+                     : erro(400, 'Selecione uma imagem.');
+    }
+
+    if (req.method === 'POST' && rota === '/clientes/login'
+        && corpo.email.trim().toLowerCase() === ADMIN_FALSO.email && corpo.senha === 'Admin@123') {
+      return ok({ ...ADMIN_FALSO, token: 'token-falso' });
     }
 
     if (req.method === 'POST' && rota === '/clientes/login') {

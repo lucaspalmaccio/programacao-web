@@ -74,6 +74,18 @@ export class ProdutoService {
     });
   }
 
+  /** Envia a foto (multipart) e devolve a URL pública gerada pela API. */
+  async enviarFoto(arquivo: File): Promise<Resultado & { url?: string }> {
+    const corpo = new FormData();
+    corpo.append('arquivo', arquivo);
+    try {
+      const { url } = await firstValueFrom(this.http.post<{ url: string }>(`${API_URL}/uploads/vinhos`, corpo));
+      return { ok: true, url };
+    } catch (e) {
+      return { ok: false, erro: mensagemDeErro(e, 'Não foi possível enviar a imagem.') };
+    }
+  }
+
   private async gravar(acao: () => Promise<void>): Promise<Resultado> {
     try {
       await acao();

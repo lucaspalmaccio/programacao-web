@@ -626,12 +626,12 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       expect(router.url).toBe('/');
     });
 
-    it('menu do usuário no header traz Perfil, Pedidos, Gerenciar vinhos e Sair', async () => {
+    it('menu do usuário no header traz Perfil, Pedidos e Sair (sem Gerenciar vinhos para cliente comum)', async () => {
       await ir('/');
       q<HTMLButtonElement>('header .usuario-link')!.click();
       fixture.detectChanges();
       const itens = qa('.menu-usuario [role="menuitem"]').map(i => i.textContent!.trim());
-      expect(itens).toEqual(['Meu perfil', 'Meus pedidos', 'Gerenciar vinhos', 'Sair']);
+      expect(itens).toEqual(['Meu perfil', 'Meus pedidos', 'Sair']);
     });
 
     it('Meus pedidos: vazio e com histórico', async () => {
@@ -685,10 +685,50 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       expect(router.url).toContain('/login');
     });
 
+    it('cliente comum é mandado de volta à vitrine e não vê o link no menu', async () => {
+      await TestBed.inject(AuthService).cadastrar(usuario);
+      await ir('/admin/vinhos');
+      expect(router.url).toBe('/');
+      q('header .usuario-link')!.click();
+      fixture.detectChanges();
+      expect(qa('.menu-usuario a').some(a => a.textContent!.includes('Gerenciar vinhos'))).toBeFalse();
+    });
+
+    it('administrador vê o link no menu', async () => {
+      await TestBed.inject(AuthService).login('admin@divino.com', 'Admin@123');
+      await ir('/');
+      q('header .usuario-link')!.click();
+      fixture.detectChanges();
+      expect(qa('.menu-usuario a').some(a => a.textContent!.includes('Gerenciar vinhos'))).toBeTrue();
+    });
+
     describe('logado', () => {
       beforeEach(async () => {
-        await TestBed.inject(AuthService).cadastrar(usuario);
+        await TestBed.inject(AuthService).login('admin@divino.com', 'Admin@123');
         await ir('/admin/vinhos');
+      });
+
+      it('upload de imagem preenche o campo foto e mostra a prévia', async () => {
+        const arquivo = new File([new Uint8Array([1, 2, 3])], 'rotulo.png', { type: 'image/png' });
+        const dt = new DataTransfer();
+        dt.items.add(arquivo);
+        const campo = q<HTMLInputElement>('#vArquivo')!;
+        campo.files = dt.files;
+        campo.dispatchEvent(new Event('change', { bubbles: true }));
+        await estabilizar(100);
+        expect(q<HTMLInputElement>('#vFoto')!.value).toBe('http://localhost:8080/uploads/vinhos/rotulo.png');
+        expect(q('img.previa')).not.toBeNull();
+      });
+
+      it('upload recusa arquivo que não é imagem', async () => {
+        const dt = new DataTransfer();
+        dt.items.add(new File(['oi'], 'nota.txt', { type: 'text/plain' }));
+        const campo = q<HTMLInputElement>('#vArquivo')!;
+        campo.files = dt.files;
+        campo.dispatchEvent(new Event('change', { bubbles: true }));
+        await estabilizar(50);
+        expect(q('[role="alert"]')!.textContent).toContain('Envie uma imagem');
+        expect(q<HTMLInputElement>('#vFoto')!.value).toBe('');
       });
 
       it('lista o catálogo e valida o formulário vazio', async () => {

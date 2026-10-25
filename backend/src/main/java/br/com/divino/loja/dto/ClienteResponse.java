@@ -15,7 +15,9 @@ public record ClienteResponse(
         String telefone,
         LocalDate nascimento,
         EnderecoDto endereco,
-        LocalDateTime dataCadastro
+        LocalDateTime dataCadastro,
+        boolean admin,
+        String token
 ) {
 
     public static ClienteResponse de(Cliente c) {
@@ -23,6 +25,11 @@ public record ClienteResponse(
         EnderecoDto endereco = (e == null || e.getCep() == null) ? null
                 : new EnderecoDto(e.getCep(), e.getEndereco(), e.getNumero(), e.getCidade(), e.getUf());
         return new ClienteResponse(c.getId(), c.getNome(), c.getEmail(), c.getCpf(), c.getTelefone(),
-                c.getNascimento(), endereco, c.getDataCadastro());
+                c.getNascimento(), endereco, c.getDataCadastro(), c.isAdmin(), null);
+    }
+
+    /** Versão devolvida no cadastro e no login, com o token que o front envia nas próximas chamadas. */
+    public ClienteResponse comToken(String novoToken) {
+        return new ClienteResponse(id, nome, email, cpf, telefone, nascimento, endereco, dataCadastro, admin, novoToken);
     }
 }

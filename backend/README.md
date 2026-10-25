@@ -70,6 +70,20 @@ Subtotal e total são calculados no servidor a partir dos itens. Excluir um clie
 | PUT | `/api/produtos/{id}` | 200 / 400 / 404 |
 | DELETE | `/api/produtos/{id}` | 204 / 404 |
 
+**Escrita (POST/PUT/DELETE) exige administrador:** enviar `Authorization: Bearer <token>`. Sem token → 401; cliente comum → 403. Leituras (GET) são públicas.
+
+O token vem no `token` da resposta de `POST /api/clientes` e `POST /api/clientes/login` (assinado com HMAC, expira em 12 h). O perfil admin é lido do banco a cada chamada.
+
+**Conta de administrador:** criada na subida com `divino.admin.email` / `divino.admin.senha` (`application.properties`; padrão `admin@divino.com` / `Admin@123`). Troque a senha e o `divino.seguranca.segredo` fora do desenvolvimento.
+
+## Upload de fotos — `/api/uploads`
+
+| Método | Rota | Respostas |
+|---|---|---|
+| POST | `/api/uploads/vinhos` | 201 `{ "url": "..." }` / 400 (não é PNG/JPG/WEBP) / 401 / 403 / 413 (> 2 MB) |
+
+Multipart, campo `arquivo`. O formato é conferido pelo conteúdo do arquivo e o nome é gerado pelo servidor. Os arquivos ficam em `divino.upload-dir` (padrão `./uploads`) e são servidos em `/uploads/vinhos/{arquivo}`. Use a `url` devolvida no campo `foto` do produto.
+
 O catálogo inicial (13 vinhos) vem de `src/main/resources/produtos-seed.json` e é cadastrado na primeira subida, quando a tabela está vazia.
 
 ## MySQL (opcional)

@@ -64,8 +64,28 @@
       </div>
 
       <div class="col-12">
-        <label class="form-label" for="vFoto">Foto (caminho em <code>public/</code>)</label>
-        <input id="vFoto" type="text" class="form-control" formControlName="foto" placeholder="vinhos/meu-vinho.png" [class.is-invalid]="invalido('foto')">
+        <label class="form-label" for="vArquivo">Foto do vinho</label>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+          @if (fotoAtual) {
+            <img [src]="fotoAtual" alt="Pré-visualização da foto" class="previa" appFotoFallback>
+          }
+          <div class="flex-grow-1">
+            <input id="vArquivo" type="file" class="form-control" accept="image/png,image/jpeg,image/webp"
+                   (change)="aoEscolherFoto($event)" [disabled]="enviandoFoto">
+            <div class="form-text">PNG, JPG ou WEBP, até 2 MB.</div>
+            @if (enviandoFoto) {
+              <div class="small text-muted mt-1">Enviando imagem...</div>
+            }
+            @if (erroFoto) {
+              <div class="text-danger small mt-1" role="alert">{{ erroFoto }}</div>
+            }
+          </div>
+          @if (fotoAtual) {
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="removerFoto()">Remover foto</button>
+          }
+        </div>
+        <label class="form-label small mt-3 mb-1" for="vFoto">ou informe o caminho/URL da imagem</label>
+        <input id="vFoto" type="text" class="form-control form-control-sm" formControlName="foto" placeholder="vinhos/meu-vinho.png" [class.is-invalid]="invalido('foto')">
         <div class="invalid-feedback">Até 255 caracteres.</div>
       </div>
       <div class="col-12 col-md-6">
@@ -85,7 +105,7 @@
     }
 
     <div class="d-flex gap-2 mt-4">
-      <button type="submit" class="btn btn-vinho" [disabled]="salvando">
+      <button type="submit" class="btn btn-vinho" [disabled]="salvando || enviandoFoto">
         {{ salvando ? 'Salvando...' : (editando ? 'Salvar alterações' : 'Cadastrar vinho') }}
       </button>
       @if (editando) {

@@ -21,6 +21,9 @@ export interface Usuario {
   telefone: string;
   nascimento: string;
   endereco?: Endereco;
+  admin?: boolean;
+  /** Token enviado à API nas rotas protegidas (só no navegador do próprio cliente). */
+  token?: string;
 }
 
 export interface NovoUsuario {
@@ -86,7 +89,7 @@ export class AuthService {
       return { ok: false, erro: 'Você precisa estar logado.' };
     }
     return this.executar(async () => {
-      const { id, ...cadastro } = { ...atual, ...alteracoes };
+      const { id, admin, token, ...cadastro } = { ...atual, ...alteracoes };
       const cliente = await firstValueFrom(this.http.put<Usuario>(`${this.url}/${id}`, cadastro));
       this.abrirSessao(cliente);
     });
@@ -122,6 +125,8 @@ export class AuthService {
   private abrirSessao(cliente: Usuario): void {
     const usuario: Usuario = {
       ...cliente,
+      // o PUT do perfil não devolve token: mantém o da sessão atual
+      token: cliente.token ?? this.usuarioLogado()?.token,
       cpf: aplicarMascara(cliente.cpf, 'cpf'),
       telefone: aplicarMascara(cliente.telefone, 'telefone'),
       endereco: cliente.endereco && { ...cliente.endereco, cep: aplicarMascara(cliente.endereco.cep, 'cep') }

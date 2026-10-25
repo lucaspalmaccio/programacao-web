@@ -14,6 +14,7 @@ import br.com.divino.loja.exception.ConflitoException;
 import br.com.divino.loja.exception.RecursoNaoEncontradoException;
 import br.com.divino.loja.repository.ClienteRepository;
 import br.com.divino.loja.repository.PedidoRepository;
+import br.com.divino.loja.security.TokenService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,11 +37,14 @@ public class ClienteService {
     private final ClienteRepository repository;
     private final PedidoRepository pedidos;
     private final PasswordEncoder passwordEncoder;
+    private final TokenService tokens;
 
-    public ClienteService(ClienteRepository repository, PedidoRepository pedidos, PasswordEncoder passwordEncoder) {
+    public ClienteService(ClienteRepository repository, PedidoRepository pedidos, PasswordEncoder passwordEncoder,
+                          TokenService tokens) {
         this.repository = repository;
         this.pedidos = pedidos;
         this.passwordEncoder = passwordEncoder;
+        this.tokens = tokens;
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +73,8 @@ public class ClienteService {
         Cliente cliente = new Cliente();
         preencher(cliente, dto.nome(), email, cpf, dto.telefone(), dto.nascimento(), dto.endereco());
         cliente.setSenhaHash(passwordEncoder.encode(dto.senha()));
-        return ClienteResponse.de(repository.save(cliente));
+        Cliente salvo = repository.save(cliente);
+        return ClienteResponse.de(salvo).comToken(tokens.emitir(salvo.getId()));
     }
 
     public ClienteResponse atualizar(Long id, ClienteUpdateRequest dto) {
@@ -123,7 +128,7 @@ public class ClienteService {
         Cliente cliente = repository.buscarPorEmailNativo(normalizarEmail(dto.email()))
                 .filter(c -> passwordEncoder.matches(dto.senha(), c.getSenhaHash()))
                 .orElseThrow(() -> new CredenciaisInvalidasException("E-mail ou senha incorretos."));
-        return ClienteResponse.de(cliente);
+        return ClienteResponse.de(cliente).comToken(tokens.emitir(cliente.getId()));
     }
 
     public void alterarSenha(Long id, AlterarSenhaRequest dto) {

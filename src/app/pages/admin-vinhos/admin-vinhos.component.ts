@@ -24,7 +24,12 @@ export class AdminVinhosComponent implements OnInit {
   excluindo: Produto | null = null;
   enviado = false;
   salvando = false;
+  enviandoFoto = false;
   erro = '';
+  erroFoto = '';
+
+  private readonly tiposImagem = ['image/png', 'image/jpeg', 'image/webp'];
+  private readonly limiteFoto = 2 * 1024 * 1024;
 
   constructor(
     private fb: FormBuilder,
@@ -87,6 +92,42 @@ export class AdminVinhosComponent implements OnInit {
     }
     this.toast.mostrar(this.editando ? 'Vinho atualizado' : 'Vinho cadastrado');
     this.novo();
+  }
+
+  /** Envia a imagem escolhida para a API e preenche o campo Foto com a URL devolvida. */
+  async aoEscolherFoto(evento: Event): Promise<void> {
+    const campo = evento.target as HTMLInputElement;
+    const arquivo = campo.files?.[0];
+    campo.value = '';
+    this.erroFoto = '';
+    if (!arquivo) {
+      return;
+    }
+    if (!this.tiposImagem.includes(arquivo.type)) {
+      this.erroFoto = 'Envie uma imagem PNG, JPG ou WEBP.';
+      return;
+    }
+    if (arquivo.size > this.limiteFoto) {
+      this.erroFoto = 'A imagem deve ter no máximo 2 MB.';
+      return;
+    }
+    this.enviandoFoto = true;
+    const resultado = await this.produtos.enviarFoto(arquivo);
+    this.enviandoFoto = false;
+    if (resultado.ok) {
+      this.form.patchValue({ foto: resultado.url });
+      this.form.get('foto')!.markAsDirty();
+    } else {
+      this.erroFoto = resultado.erro ?? '';
+    }
+  }
+
+  removerFoto(): void {
+    this.form.patchValue({ foto: '' });
+  }
+
+  get fotoAtual(): string {
+    return (this.form.get('foto')?.value ?? '').trim();
   }
 
   pedirExclusao(produto: Produto): void {

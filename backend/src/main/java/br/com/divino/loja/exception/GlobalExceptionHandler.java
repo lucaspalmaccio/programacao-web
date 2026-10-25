@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -26,6 +28,30 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public Map<String, Object> naoAutorizado(CredenciaisInvalidasException ex) {
         return corpo(HttpStatus.UNAUTHORIZED, ex.getMessage(), null);
+    }
+
+    @ExceptionHandler(AcessoNegadoException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Map<String, Object> proibido(AcessoNegadoException ex) {
+        return corpo(HttpStatus.FORBIDDEN, ex.getMessage(), null);
+    }
+
+    @ExceptionHandler(ArquivoInvalidoException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> arquivoInvalido(ArquivoInvalidoException ex) {
+        return corpo(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    public Map<String, Object> arquivoGrande(MaxUploadSizeExceededException ex) {
+        return corpo(HttpStatus.PAYLOAD_TOO_LARGE, "A imagem deve ter no máximo 2 MB.", null);
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> parteAusente(MissingServletRequestPartException ex) {
+        return corpo(HttpStatus.BAD_REQUEST, "Selecione uma imagem.", null);
     }
 
     @ExceptionHandler(ConflitoException.class)

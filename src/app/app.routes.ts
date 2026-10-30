@@ -7,6 +7,7 @@ import { BuscaComponent } from './pages/busca/busca.component';
 import { PerfilComponent } from './pages/perfil/perfil.component';
 import { PedidosComponent } from './pages/pedidos/pedidos.component';
 import { AdminVinhosComponent } from './pages/admin-vinhos/admin-vinhos.component';
+import { AdminClientesComponent } from './pages/admin-clientes/admin-clientes.component';
 import { adminGuard, authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -18,6 +19,7 @@ export const routes: Routes = [
   { path: 'perfil', component: PerfilComponent, canActivate: [authGuard], title: 'Meu perfil' },
   { path: 'pedidos', component: PedidosComponent, canActivate: [authGuard], title: 'Meus pedidos' },
   { path: 'admin/vinhos', component: AdminVinhosComponent, canActivate: [adminGuard], title: 'Gerenciar vinhos' },
+  { path: 'admin/clientes', component: AdminClientesComponent, canActivate: [adminGuard], title: 'Gerenciar clientes' },
   { path: 'busca', component: BuscaComponent, title: 'Busca' },
   { path: '**', redirectTo: '' }
 ];

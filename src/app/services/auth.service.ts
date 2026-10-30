@@ -22,6 +22,7 @@ export interface Usuario {
   nascimento: string;
   endereco?: Endereco;
   admin?: boolean;
+  dataCadastro?: string;
   /** Token enviado à API nas rotas protegidas (só no navegador do próprio cliente). */
   token?: string;
 }

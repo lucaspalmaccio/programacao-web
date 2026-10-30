@@ -76,6 +76,23 @@ export function provideApiFalsa(): EnvironmentProviders {
       return ok(null, 204);
     }
 
+    if (req.method === 'GET' && rota === '/clientes') {
+      const nome = (req.params.get('nome') ?? '').trim().toLowerCase();
+      return ok([ADMIN_FALSO, ...clientes.map(publico)].filter(c => !nome || c.nome.toLowerCase().includes(nome)));
+    }
+
+    if (req.method === 'DELETE' && (m = rota.match(/^\/clientes\/(\d+)$/))) {
+      const i = clientes.findIndex(x => x.id === +m![1]);
+      if (i < 0) {
+        return erro(404, 'Cliente não encontrado.');
+      }
+      if (pedidos.some(p => p.clienteId === clientes[i].id)) {
+        return erro(409, 'Cliente possui pedidos e não pode ser excluído.');
+      }
+      clientes.splice(i, 1);
+      return ok(null, 204);
+    }
+
     if (req.method === 'POST' && rota === '/clientes') {
       const email = corpo.email.trim().toLowerCase();
       const cpf = digitos(corpo.cpf);
@@ -86,8 +103,9 @@ export function provideApiFalsa(): EnvironmentProviders {
         return erro(409, 'Já existe uma conta com esse CPF.');
       }
       const cliente = {
-        id: clientes.length + 1, nome: corpo.nome.trim(), email, cpf, telefone: digitos(corpo.telefone),
-        nascimento: corpo.nascimento, senha: corpo.senha, endereco: endereco(corpo.endereco)
+        id: Math.max(0, ...clientes.map(x => x.id)) + 1, nome: corpo.nome.trim(), email, cpf, telefone: digitos(corpo.telefone),
+        nascimento: corpo.nascimento, senha: corpo.senha, endereco: endereco(corpo.endereco),
+        dataCadastro: new Date().toISOString()
       };
       clientes.push(cliente);
       return ok(publico(cliente), 201);
@@ -118,8 +136,19 @@ export function provideApiFalsa(): EnvironmentProviders {
       if (!c) {
         return erro(404, 'Cliente não encontrado.');
       }
+      const email = corpo.email.trim().toLowerCase();
+      const cpf = digitos(corpo.cpf);
+      if (clientes.some(x => x.id !== c.id && x.email === email)) {
+        return erro(409, 'Já existe outra conta com esse e-mail.');
+      }
+      if (clientes.some(x => x.id !== c.id && x.cpf === cpf)) {
+        return erro(409, 'Já existe outra conta com esse CPF.');
+      }
+      if (corpo.senha) {
+        c.senha = corpo.senha;
+      }
       Object.assign(c, {
-        nome: corpo.nome.trim(), telefone: digitos(corpo.telefone), nascimento: corpo.nascimento,
+        nome: corpo.nome.trim(), email, cpf, telefone: digitos(corpo.telefone), nascimento: corpo.nascimento,
         endereco: corpo.endereco ? endereco(corpo.endereco) : c.endereco
       });
       return ok(publico(c));

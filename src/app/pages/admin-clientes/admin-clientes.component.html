@@ -1,0 +1,157 @@
+<main class="container py-4 py-md-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+      <h1 class="h4 text-vinho brand-font mb-0">Gerenciar clientes</h1>
+      <small class="text-muted">{{ clientes.clientes().length }} cadastrado(s)</small>
+    </div>
+    <button type="button" class="btn btn-vinho btn-sm" (click)="novo()"><i class="bi bi-plus-lg"></i> Novo cliente</button>
+  </div>
+
+  <!-- Formulário de cadastro / edição -->
+  <form class="card p-4 mb-4" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+    <h2 class="h6 text-vinho mb-3">{{ editando ? 'Editar: ' + editando.nome : 'Cadastrar novo cliente' }}</h2>
+
+    <div class="row g-3">
+      <div class="col-12 col-md-6">
+        <label class="form-label" for="cNome">Nome completo</label>
+        <input id="cNome" type="text" class="form-control" formControlName="nome" [class.is-invalid]="invalido('nome')">
+        <div class="invalid-feedback">Informe nome e sobrenome.</div>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label" for="cEmail">E-mail</label>
+        <input id="cEmail" type="email" class="form-control" formControlName="email" [class.is-invalid]="invalido('email')">
+        <div class="invalid-feedback">Informe um e-mail válido.</div>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="cCpf">CPF</label>
+        <input id="cCpf" type="text" class="form-control" formControlName="cpf" appMascara="cpf" inputmode="numeric" [class.is-invalid]="invalido('cpf')">
+        <div class="invalid-feedback">CPF inválido.</div>
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="cTelefone">Telefone</label>
+        <input id="cTelefone" type="text" class="form-control" formControlName="telefone" appMascara="telefone" inputmode="tel" [class.is-invalid]="invalido('telefone')">
+        <div class="invalid-feedback">Telefone inválido.</div>
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="cNascimento">Nascimento</label>
+        <input id="cNascimento" type="date" class="form-control" formControlName="nascimento" [class.is-invalid]="invalido('nascimento')">
+        <div class="invalid-feedback">Data inválida (mínimo 18 anos).</div>
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="cSenha">{{ editando ? 'Nova senha' : 'Senha' }}</label>
+        <input id="cSenha" type="password" class="form-control" formControlName="senha" autocomplete="new-password"
+               [placeholder]="editando ? 'Deixe em branco para manter' : ''" [class.is-invalid]="invalido('senha')">
+        <div class="invalid-feedback">Mínimo de 8 caracteres, com letras e números.</div>
+      </div>
+
+      <div class="col-12" formGroupName="endereco">
+        <div class="form-text mb-2">Endereço (opcional; se preencher um campo, preencha todos)</div>
+        <div class="row g-3">
+          <div class="col-6 col-md-2">
+            <label class="form-label" for="cCep">CEP</label>
+            <input id="cCep" type="text" class="form-control" formControlName="cep" appMascara="cep" inputmode="numeric" [class.is-invalid]="invalido('endereco.cep')">
+            <div class="invalid-feedback">CEP inválido.</div>
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="cEndereco">Endereço</label>
+            <input id="cEndereco" type="text" class="form-control" formControlName="endereco">
+          </div>
+          <div class="col-4 col-md-1">
+            <label class="form-label" for="cNumero">Nº</label>
+            <input id="cNumero" type="text" class="form-control" formControlName="numero">
+          </div>
+          <div class="col-8 col-md-3">
+            <label class="form-label" for="cCidade">Cidade</label>
+            <input id="cCidade" type="text" class="form-control" formControlName="cidade">
+          </div>
+          <div class="col-4 col-md-1">
+            <label class="form-label" for="cUf">UF</label>
+            <input id="cUf" type="text" class="form-control" formControlName="uf" maxlength="2" [class.is-invalid]="invalido('endereco.uf')">
+          </div>
+        </div>
+        @if (enderecoIncompleto) {
+          <div class="text-danger small mt-2" role="alert">Preencha todos os campos do endereço ou deixe todos em branco.</div>
+        }
+      </div>
+    </div>
+
+    @if (erro) {
+      <div class="alert alert-danger mt-3 mb-0" role="alert">{{ erro }}</div>
+    }
+
+    <div class="d-flex gap-2 mt-4">
+      <button type="submit" class="btn btn-vinho" [disabled]="salvando">
+        {{ salvando ? 'Salvando...' : (editando ? 'Salvar alterações' : 'Cadastrar cliente') }}
+      </button>
+      @if (editando) {
+        <button type="button" class="btn btn-outline-vinho" (click)="novo()">Cancelar edição</button>
+      }
+    </div>
+  </form>
+
+  <!-- Busca -->
+  <form class="d-flex gap-2 mb-3" (ngSubmit)="buscar()">
+    <input type="search" class="form-control" name="busca" [(ngModel)]="busca" placeholder="Buscar por nome" aria-label="Buscar cliente por nome">
+    <button type="submit" class="btn btn-vinho" [disabled]="carregando"><i class="bi bi-search"></i> Buscar</button>
+    @if (busca) {
+      <button type="button" class="btn btn-outline-vinho" (click)="limparBusca()">Limpar</button>
+    }
+  </form>
+
+  @if (clientes.erro()) {
+    <div class="alert alert-danger" role="alert">{{ clientes.erro() }}</div>
+  }
+
+  <!-- Lista -->
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr>
+            <th scope="col">Nome</th>
+            <th scope="col">E-mail</th>
+            <th scope="col">Telefone</th>
+            <th scope="col">Cidade</th>
+            <th scope="col">Cadastro</th>
+            <th scope="col" class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of clientes.clientes(); track c.id) {
+            <tr>
+              <td>
+                {{ c.nome }}
+                @if (c.admin) {
+                  <span class="badge text-bg-secondary ms-1">admin</span>
+                }
+              </td>
+              <td>{{ c.email }}</td>
+              <td>{{ c.telefone }}</td>
+              <td>{{ c.endereco ? c.endereco.cidade + '/' + c.endereco.uf : '—' }}</td>
+              <td>{{ c.dataCadastro | date: 'dd/MM/yyyy' }}</td>
+              <td class="text-end text-nowrap">
+                @if (excluindo?.id === c.id) {
+                  <span class="small me-2">Excluir?</span>
+                  <button type="button" class="btn btn-sm btn-danger me-1" (click)="confirmarExclusao()">Sim</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="excluindo = null">Não</button>
+                } @else {
+                  <button type="button" class="btn btn-sm btn-outline-vinho me-1" (click)="editar(c)" [attr.aria-label]="'Editar ' + c.nome">
+                    <i class="bi bi-pencil"></i> Editar
+                  </button>
+                  @if (!c.admin) {
+                    <button type="button" class="btn btn-sm btn-outline-danger" (click)="pedirExclusao(c)" [attr.aria-label]="'Excluir ' + c.nome">
+                      <i class="bi bi-trash"></i> Excluir
+                    </button>
+                  }
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="text-center text-muted py-4">Nenhum cliente encontrado.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>

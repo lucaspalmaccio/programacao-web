@@ -771,4 +771,128 @@ describe('Fluxos da aplicação (regressão ponta a ponta)', () => {
       });
     });
   });
+  // ---------- Administração de clientes ----------
+  describe('Gerenciar clientes (administrador)', () => {
+    function preencherCliente(nome: string, email: string, cpf: string): void {
+      digitar('#cNome', nome);
+      digitar('#cEmail', email);
+      digitar('#cCpf', cpf);
+      digitar('#cTelefone', '11912345678');
+      digitar('#cNascimento', '1990-05-10');
+      digitar('#cSenha', 'senha1234');
+    }
+
+    async function enviarCliente(rotulo: string): Promise<void> {
+      textoBotao(rotulo)!.click();
+      await estabilizar(100);
+    }
+
+    const linhas = () => qa('tbody tr');
+
+    it('exige login e bloqueia cliente comum', async () => {
+      await ir('/admin/clientes');
+      expect(router.url).toContain('/login');
+      await TestBed.inject(AuthService).cadastrar(usuario);
+      await ir('/admin/clientes');
+      expect(router.url).toBe('/');
+    });
+
+    it('administrador vê o link no menu', async () => {
+      await TestBed.inject(AuthService).login('admin@divino.com', 'Admin@123');
+      await ir('/');
+      q('header .usuario-link')!.click();
+      fixture.detectChanges();
+      expect(qa('.menu-usuario a').some(a => a.textContent!.includes('Gerenciar clientes'))).toBeTrue();
+    });
+
+    describe('logado', () => {
+      beforeEach(async () => {
+        await TestBed.inject(AuthService).login('admin@divino.com', 'Admin@123');
+        await ir('/admin/clientes');
+        await estabilizar();
+      });
+
+      it('lista os clientes vindos da API, com o administrador marcado', () => {
+        expect(linhas().length).toBe(1);
+        expect(linhas()[0].textContent).toContain('Administrador Di Vino');
+        expect(linhas()[0].textContent).toContain('admin');
+        expect(linhas()[0].textContent).not.toContain('Excluir');
+      });
+
+      it('valida o formulário vazio e não cadastra', async () => {
+        await enviarCliente('Cadastrar cliente');
+        expect(qa('.invalid-feedback').length).toBeGreaterThan(0);
+        expect(linhas().length).toBe(1);
+      });
+
+      it('cadastra um cliente, que aparece na lista sem trocar a sessão do admin', async () => {
+        preencherCliente('Maria Silva', 'maria@exemplo.com', '52998224725');
+        await enviarCliente('Cadastrar cliente');
+        expect(linhas().length).toBe(2);
+        expect(q('tbody')!.textContent).toContain('Maria Silva');
+        expect(q('tbody')!.textContent).toContain('(11) 91234-5678');
+        expect(TestBed.inject(AuthService).usuarioLogado()!.admin).toBeTrue();
+      });
+
+      it('mostra o erro da API quando o e-mail já existe', async () => {
+        preencherCliente('Maria Silva', 'maria@exemplo.com', '52998224725');
+        await enviarCliente('Cadastrar cliente');
+        preencherCliente('Outra Maria', 'maria@exemplo.com', '11144477735');
+        await enviarCliente('Cadastrar cliente');
+        expect(q('.alert-danger')!.textContent).toContain('e-mail');
+        expect(linhas().length).toBe(2);
+      });
+
+      it('exige endereço completo quando algum campo é preenchido', async () => {
+        preencherCliente('Maria Silva', 'maria@exemplo.com', '52998224725');
+        digitar('#cCidade', 'São Paulo');
+        await enviarCliente('Cadastrar cliente');
+        expect(q('[role="alert"]')!.textContent).toContain('endereço');
+        expect(linhas().length).toBe(1);
+      });
+
+      it('edita um cliente sem exigir a senha', async () => {
+        preencherCliente('Maria Silva', 'maria@exemplo.com', '52998224725');
+        await enviarCliente('Cadastrar cliente');
+        qa<HTMLButtonElement>('tbody button').find(b => b.getAttribute('aria-label') === 'Editar Maria Silva')!.click();
+        fixture.detectChanges();
+        expect(q<HTMLInputElement>('#cNome')!.value).toBe('Maria Silva');
+        expect(q<HTMLInputElement>('#cCpf')!.value).toBe('529.982.247-25');
+        digitar('#cNome', 'Maria Souza');
+        await enviarCliente('Salvar alterações');
+        expect(q('tbody')!.textContent).toContain('Maria Souza');
+        expect(q('tbody')!.textContent).not.toContain('Maria Silva');
+        expect(linhas().length).toBe(2);
+      });
+
+      it('busca por nome', async () => {
+        preencherCliente('Maria Silva', 'maria@exemplo.com', '52998224725');
+        await enviarCliente('Cadastrar cliente');
+        digitar('input[name="busca"]', 'maria');
+        await enviarCliente('Buscar');
+        expect(linhas().length).toBe(1);
+        expect(linhas()[0].textContent).toContain('Maria Silva');
+        digitar('input[name="busca"]', 'zzz');
+        await enviarCliente('Buscar');
+        expect(q('tbody')!.textContent).toContain('Nenhum cliente encontrado');
+      });
+
+      it('exclui só depois de confirmar', async () => {
+        preencherCliente('Maria Silva', 'maria@exemplo.com', '52998224725');
+        await enviarCliente('Cadastrar cliente');
+        const excluir = () => qa<HTMLButtonElement>('tbody button').find(b => b.textContent!.includes('Excluir'))!;
+        excluir().click();
+        fixture.detectChanges();
+        qa<HTMLButtonElement>('tbody button').find(b => b.textContent!.trim() === 'Não')!.click();
+        fixture.detectChanges();
+        expect(linhas().length).toBe(2);
+        excluir().click();
+        fixture.detectChanges();
+        qa<HTMLButtonElement>('tbody button').find(b => b.textContent!.trim() === 'Sim')!.click();
+        await estabilizar(100);
+        expect(linhas().length).toBe(1);
+        expect(q('tbody')!.textContent).not.toContain('Maria Silva');
+      });
+    });
+  });
 });

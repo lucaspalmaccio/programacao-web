@@ -48,6 +48,7 @@
                   <a routerLink="/pedidos" role="menuitem" (click)="menuAberto = false"><i class="bi bi-bag"></i> Meus pedidos</a>
                   @if (usuario.admin) {
                     <a routerLink="/admin/vinhos" role="menuitem" (click)="menuAberto = false"><i class="bi bi-cup-straw"></i> Gerenciar vinhos</a>
+                    <a routerLink="/admin/clientes" role="menuitem" (click)="menuAberto = false"><i class="bi bi-people"></i> Gerenciar clientes</a>
                   }
                   <button type="button" role="menuitem" (click)="sair()"><i class="bi bi-box-arrow-right"></i> Sair</button>
                 </div>

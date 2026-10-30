@@ -11,6 +11,8 @@ npm start
 
 A aplicação abre em `http://localhost:4200`.
 
+O administrador (`admin@divino.com`) gerencia os vinhos em `/admin/vinhos` e os clientes em `/admin/clientes`.
+
 ## Build de produção
 
 ```bash
